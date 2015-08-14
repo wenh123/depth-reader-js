@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/mocha/mocha.css" />
+  </head>
+  <body>
+    <div id="mocha"></div>
+    <script src="/mocha/mocha.js"></script>
+    <script src="/chai/chai.js"></script>
+    <script src="/chai-as-promised/lib/chai-as-promised.js"></script>
+    <script>
+      mocha.ui('bdd');
+      mocha.reporter('html');
+      mocha.timeout(10000);
+    </script>
+    <script src="/rsvp/rsvp.js"></script>
+    <script src="/src/depth-reader.js"></script>
+    <script src="/test/test.js"></script>
+    <script>
+      if (window.mochaPhantomJS) {
+        mochaPhantomJS.run();
+      } else {
+        mocha.run();
+      }
+    </script>
+  </body>
+</html>
