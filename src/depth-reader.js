@@ -2,36 +2,33 @@
   'use strict';
 
   var root = this // _window_ if in browser
-    , atob
     , Promise
-    , DOMParser
-    , XMLHttpRequest;
+    , XMLHttpRequest
+    , DOMParser;
 
   if ('object' === typeof exports) { // Node.js
-    atob           = require('atob');
     Promise        = require('rsvp').Promise;
-    DOMParser      = require('xmldom').DOMParser;
     XMLHttpRequest = require('xhr2');
+    DOMParser      = require('xmldom').DOMParser;
   } else { // browser
-    atob           = root.atob;
     Promise        = root.RSVP.Promise;
-    DOMParser      = root.DOMParser;
     XMLHttpRequest = root.XMLHttpRequest;
+    DOMParser      = root.DOMParser;
   }
 
   var DepthReader = function() {
     this.isXDM = false;
     this.image = {
       mime: ''
-    , data: null
+    , data: null // data URI
     };
     this.depth = {
-      inMetric: false
-    , format:   ''
+      inMetric: false // unit is meter if true
+    , format:   '' // RangeInverse/RangeLinear
     , near:     0
     , far:      0
     , mime:     ''
-    , data:     null
+    , data:     null // data URI
     };
     this.focus = {
       focalPointX:    0
@@ -93,6 +90,8 @@
       parseLensBlur(this, imageNS, extDescElt
                                  , xapDescElt);
     }
+    makeDataURI(this.image);
+    makeDataURI(this.depth);
   };
 
   function parseXDM(self, imageNS, extDescElt) {
@@ -107,10 +106,10 @@
     self.depth.near     =          +descElt.getAttributeNS(depthNS, 'Near');
     self.depth.far      =          +descElt.getAttributeNS(depthNS, 'Far');
 
-    self.image.mime =      imageElt.getAttributeNS(imageNS, 'Mime');
-    self.depth.mime =       descElt.getAttributeNS(depthNS, 'Mime');
-    self.image.data = atob(imageElt.getAttributeNS(imageNS, 'Data'));
-    self.depth.data = atob( descElt.getAttributeNS(depthNS, 'Data'));
+    self.image.mime = imageElt.getAttributeNS(imageNS, 'Mime');
+    self.depth.mime =  descElt.getAttributeNS(depthNS, 'Mime');
+    self.image.data = imageElt.getAttributeNS(imageNS, 'Data');
+    self.depth.data =  descElt.getAttributeNS(depthNS, 'Data');
   }
 
   function parseLensBlur(self, imageNS, extDescElt, xapDescElt) {
@@ -123,14 +122,14 @@
     self.focus.blurAtInfinity = +xapDescElt.getAttributeNS(focusNS, 'BlurAtInfinity');
 
     self.depth.inMetric = true; // assume metric as it's unspecified
-    self.depth.format   =      xapDescElt.getAttributeNS(depthNS, 'Format');
-    self.depth.near     =     +xapDescElt.getAttributeNS(depthNS, 'Near');
-    self.depth.far      =     +xapDescElt.getAttributeNS(depthNS, 'Far');
+    self.depth.format   =  xapDescElt.getAttributeNS(depthNS, 'Format');
+    self.depth.near     = +xapDescElt.getAttributeNS(depthNS, 'Near');
+    self.depth.far      = +xapDescElt.getAttributeNS(depthNS, 'Far');
 
-    self.image.mime =      xapDescElt.getAttributeNS(imageNS, 'Mime');
-    self.depth.mime =      xapDescElt.getAttributeNS(depthNS, 'Mime');
-    self.image.data = atob(extDescElt.getAttributeNS(imageNS, 'Data'));
-    self.depth.data = atob(extDescElt.getAttributeNS(depthNS, 'Data'));
+    self.image.mime = xapDescElt.getAttributeNS(imageNS, 'Mime');
+    self.depth.mime = xapDescElt.getAttributeNS(depthNS, 'Mime');
+    self.image.data = extDescElt.getAttributeNS(imageNS, 'Data');
+    self.depth.data = extDescElt.getAttributeNS(depthNS, 'Data');
   }
 
   // parse given XML and return x:xmpmeta
@@ -146,6 +145,14 @@
                     .firstChild.nextSibling; // rdf:Description
     } catch (err) {
       throw new Error('cannot parse XMP XML');
+    }
+  }
+
+  // make image.data a data URI
+  function makeDataURI(image) {
+    if (image.mime && image.data) {
+      image.data =   'data:'  + image.mime
+                 + ';base64,' + image.data;
     }
   }
 

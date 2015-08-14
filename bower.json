@@ -4,12 +4,15 @@
   "version": "0.1.0",
   "keywords": [
     "XDM",
-    "LensBlur"
+    "LensBlur",
+    "depthmap"
   ],
-  "authors": [
-    "Erhhung Yuan <erhhung.yuan@intel.com>"
-  ],
+  "homepage": "https://github.com/DavisReef/depth-reader-js",
   "license": "MIT",
+  "authors": [
+    "Erhhung Yuan <erhhung.yuan@intel.com>",
+    "Yu Bai <yu.bai@intel.com>"
+  ],
   "dependencies": {
     "rsvp": "~3.0.21"
   }

@@ -2,15 +2,18 @@
   'use strict';
 
   var root = this // _window_ if in browser
+    , Image
     , DepthReader
     , chaiAsPromised
     , chai;
 
   if ('object' === typeof exports) { // Node.js
+    Image          = require('canvas').Image;
     DepthReader    = require('../src/depth-reader');
     chaiAsPromised = require('chai-as-promised');
     chai           = require('chai');
   } else { // browser
+    Image          = root.Image;
     DepthReader    = root.DepthReader;
     chaiAsPromised = root.chaiAsPromised;
     chai           = root.chai;
@@ -23,7 +26,8 @@
 
     context('"xdm-photo1.jpg" (XDM Beta)', function() {
       var jpegUrl = baseUrl + 'xdm-photo1.jpg'
-        , reader  = new DepthReader;
+        , reader  = new DepthReader
+        , image   = new Image;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -37,8 +41,15 @@
         reader.image.mime.should.equal('image/png');
       });
 
-      it('should have set image.data to atob(base64)', function() {
+      it('should have set image.data to a data URI', function() {
         reader.image.should.not.have.property('data', null);
+        reader.image.data.slice(0, 5).should.equal('data:');
+      });
+
+      it('should have reference image at 3200x2400', function() {
+        image.src = reader.image.data;
+        image.width.should.equal(3200);
+        image.height.should.equal(2400);
       });
 
       it('should have set depth.inMetric to false', function() {
@@ -61,14 +72,22 @@
         reader.depth.mime.should.equal('image/png');
       });
 
-      it('should have set depth.data to atob(base64)', function() {
+      it('should have set depth.data to a data URI', function() {
         reader.depth.should.not.have.property('data', null);
+        reader.depth.data.slice(0, 5).should.equal('data:');
+      });
+
+      it('should have depthmap image at 480x360', function() {
+        image.src = reader.depth.data;
+        image.width.should.equal(480);
+        image.height.should.equal(360);
       });
     });
 
     context('"lbr-photo1.jpg" (Lens Blur)', function() {
       var jpegUrl = baseUrl + 'lbr-photo1.jpg'
-        , reader  = new DepthReader;
+        , reader  = new DepthReader
+        , image   = new Image;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -82,8 +101,15 @@
         reader.image.mime.should.equal('image/jpeg');
       });
 
-      it('should have set image.data to atob(base64)', function() {
+      it('should have set image.data to a data URI', function() {
         reader.image.should.not.have.property('data', null);
+        reader.image.data.slice(0, 5).should.equal('data:');
+      });
+
+      it('should have reference image at 576x1024', function() {
+        image.src = reader.image.data;
+        image.width.should.equal(576);
+        image.height.should.equal(1024);
       });
 
       it('should have set depth.inMetric to true', function() {
@@ -106,8 +132,15 @@
         reader.depth.mime.should.equal('image/png');
       });
 
-      it('should have set depth.data to atob(base64)', function() {
+      it('should have set depth.data to a data URI', function() {
         reader.depth.should.not.have.property('data', null);
+        reader.depth.data.slice(0, 5).should.equal('data:');
+      });
+
+      it('should have depthmap image at 576x1024', function() {
+        image.src = reader.depth.data;
+        image.width.should.equal(576);
+        image.height.should.equal(1024);
       });
 
       it('should have set focus.focalPointX to 0.5', function() {
