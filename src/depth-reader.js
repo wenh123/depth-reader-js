@@ -1,3 +1,9 @@
+/*
+MIT Licensed
+https://github.com/DavisReef/depth-reader-js
+XDM 1.0 spec: https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10
+Copyright (c)2015 Intel Corporation
+*/
 (function() {
   'use strict';
 
@@ -11,7 +17,8 @@
     XMLHttpRequest = require('xhr2');
     DOMParser      = require('xmldom').DOMParser;
   } else { // browser
-    Promise        = root.RSVP.Promise;
+    Promise        = root.Promise ||
+                     root.RSVP.Promise;
     XMLHttpRequest = root.XMLHttpRequest;
     DOMParser      = root.DOMParser;
   }
