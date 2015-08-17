@@ -19,11 +19,20 @@ if run inside PhantomJS.
 
 ## Usage
 
-First install the necessary dependencies:
+First install the dependencies:
+
+The Node.js example and tests require the `Canvas` module, which in turn depends
+on the Cairo graphics library.
+Follow these [install instructions](https://github.com/LearnBoost/node-canvas/wiki)
+prior to running `npm install`.
+
+    npm install
+
+Then include or require them:
 
 Browser:
 
-    <script src="rsvp.js"></script>
+    <script src="vendor/rsvp.js"></script>
     <script src="depth-reader.js"></script>
 
 Node.js:
@@ -58,16 +67,7 @@ Install global dependencies:
 
     npm install -g grunt mocha
 
-Node.js tests require the `Canvas` module, which in turn depends on the Cairo graphics library.
-Follow these [install instructions](https://github.com/LearnBoost/node-canvas/wiki)
-prior to running `npm install`.
-
-Install project dependencies:
-
-    npm install
-    bower install
-
-Run Node.js tests in console and browser tests in web page:
+Run Node.js tests in the console and browser tests in a web page:
 
     npm start
 
