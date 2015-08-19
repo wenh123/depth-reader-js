@@ -76,6 +76,11 @@ Run Node.js tests in the console and browser tests in a web page:
 
     npm start
 
+Print depthmap information (run HTTP server in separate console):
+
+    grunt serve
+    node test/info
+
 ## Authors
 
   - Erhhung Yuan <erhhung.yuan@intel.com>

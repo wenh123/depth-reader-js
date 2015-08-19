@@ -4,7 +4,10 @@ node test/info [url]
 */
 
 var DepthReader = require('../src/depth-reader')
-  , Canvas      = require('canvas');
+  , Promise     = require('rsvp').Promise
+  , Canvas      = require('canvas')
+  , path        = require('path')
+  , fs          = require('fs');
 
 var fileUrl = process.argv[2] ||
   'http://localhost:9000/images/xdm-photo1.jpg';
@@ -20,6 +23,7 @@ new DepthReader().loadFile(fileUrl)
       , histo  = getHistogram (canvas, 'r');
 
     console.log('Depthmap\n--------');
+    console.log('    wrote: depthmap.png');
     console.log('    width:', canvas.width);
     console.log('   height:', canvas.height);
     console.log('   format:', reader.depth.format);
@@ -29,9 +33,19 @@ new DepthReader().loadFile(fileUrl)
     console.log('max value:', range.max);
     console.log('histogram:');
 
+    var total  = canvas.width * canvas.height
+      , maxVal = histo.max.r;
     for (var i = range.min; i <= range.max; ++i) {
-      console.log(zeroPad(i, 3) + ':', histo.freq.r[i]);
+      var value = histo.freq.r[i]
+        , isMax = maxVal === value
+        , prcnt = value / total * 100;
+
+      console.log(  padZero(i,  3) + ':'
+        , pad(prcnt.toFixed(1), 4) + '%'
+        , value + (isMax ? ' *' : ''));
     }
+    var pathname = path.join(__dirname, 'depthmap.png');
+    return saveCanvas(canvas, pathname);
   })
   .catch(function(error) {
     console.error('loading failed:', error);
@@ -66,6 +80,42 @@ function initCanvas(image, width, height)
     ctx.drawImage(image, 0, 0, w, h);
     return canvas;
   }
+}
+
+/**
+save @canvas to @pathname
+@pathname: .png/.jpg file
+return: Promise
+*/
+function saveCanvas(canvas, pathname)
+{
+  return new Promise(function(resolve, reject) {
+    try {
+      var ext      = path.extname(pathname)
+        , encoder  = '.png' === ext ?  'pngStream'
+                                    : 'jpegStream'
+        , writable = fs.createWriteStream(pathname)
+        , readable = canvas[encoder]();
+
+      writable.on('finish', resolve)
+        .on('error', function(err) {
+          var msg = 'stream.Writable error: ' + err.message;
+          reject(new Error(msg));
+        });
+      readable.on('end', function() {
+          writable.end();
+        })
+        .on('error', function(err) {
+          var msg = 'Canvas.' + encoder + ' error: ' + err.message;
+          reject(new Error(msg));
+        })
+        .pipe(writable);
+    }
+    catch (err) {
+      var msg = 'saveCanvas failed: ' + err.message;
+      reject(new Error(msg));
+    }
+  });
 }
 
 // taken from http://stackoverflow.com/questions/18922880/html5-canvas-resize-downscale-image-high-quality
@@ -313,13 +363,26 @@ function getPixelData(object)
 }
 
 // pad @value converted to string with leading zeros
-// so it's at least @width characters long (up to 16)
-function zeroPad(value, width)
+// so it's at least @width characters long (up to 6)
+function padZero(value, width) {
+  return pad(value, width, '000000')
+}
+
+/**
+pad given string with filler characters on left/right
+
+@width:    if > 0, pad left; if < 0, pad right
+[@filler]: padding characters (length >= width)
+*/
+function pad(string, width, filler)
 {
-  value = String(value || '');
-  width = ~~width;
-  if (width < 1) {
-    return value;
+  filler = String(filler || '                    ');
+  string = String(string || '');
+  if (!(width = ~~width)) {
+    return string;
   }
-  return '00000000'.substr(0, width - value.length) + value;
+  var padLen = Math.abs(width) - string.length
+    , padStr = filler.slice(0, padLen);
+  return 0 < width ? padStr + string
+                   : string + padStr;
 }
