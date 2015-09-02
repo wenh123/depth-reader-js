@@ -58,6 +58,11 @@ Example:
             console.log('RGB image dimensions:',
                 rgbImage.width + 'x' + rgbImage.height);
 
+            if (reader.isXDM) {
+              // normalize depth values between 1-255
+              // and shift them by 64 to boost effect
+              reader.normalizeDepthmap(64);
+            }
             depthImage.src = reader.depth.data;
             console.log('Depthmap image dimensions:',
                 depthImage.width + 'x' + depthImage.height);
