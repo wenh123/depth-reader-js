@@ -57,7 +57,7 @@ reader.loadFile(fileUrl)
 
     if (reader.isXDM) {
       // save normalized depthmap
-      reader.normalizeDepthmap();
+      reader.normalizeDepthmap(64);
       image.src = reader.depth.data;
       ctx.drawImage(image, 0, 0);
     }

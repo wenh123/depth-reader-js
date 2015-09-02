@@ -282,10 +282,11 @@ Copyright (c)2015 Intel Corporation
 
   /*
   normalize the depthmap so that depth
-  values are scaled between 0 and 255
+  values are scaled between 1 and 255
   (overwrites the original depth.data)
+  bias: shift depth values (brightness)
   */
-  DepthReader.prototype.normalizeDepthmap = function() {
+  DepthReader.prototype.normalizeDepthmap = function(bias) {
     if (!this.depth.data ||
          this.depth._normalized) {
       return;
@@ -323,7 +324,8 @@ Copyright (c)2015 Intel Corporation
     for (i = 0; i < len; i += 4) {
       val = data[i];
       if (prev !== val) {
-        norm = Math.round((val - min) / spread * 255);
+        norm = Math.round((val - min) / spread * 255 + bias|0);
+        norm = Math.max(0, Math.min(255, norm));
         prev = val;
       }
       // modify R,G,B not alpha
