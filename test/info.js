@@ -12,74 +12,96 @@ var DepthReader = require('../src/depth-reader')
 var fileUrl = process.argv[2] ||
   'http://localhost:9000/images/xdm-photo1.jpg';
 
-new DepthReader().loadFile(fileUrl)
+var reader = new DepthReader;
+reader.debug = true; // save xmpXapXml/xmpExtXml
+
+reader.loadFile(fileUrl)
   .then(function(reader)
   {
     var image = new Canvas.Image;
-    image.src = reader.depth.data;
+    image.src = reader.depth.data
+    var w = image.width
+      , h = image.height;
 
-    var canvas = initCanvas(image)
-      , range  = getBrightness(canvas, true)
-      , histo  = getHistogram (canvas, 'r');
+    var canvas = new Canvas(w, h)
+      , ctx    = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+
+    var range  = getBrightness(canvas, true)
+      , histo  = getHistogram (canvas, 'r')
+      , maxVal = histo.max.r
+      , total  = w * h;
 
     console.log('Depthmap\n--------');
     console.log('    wrote: depthmap.png');
-    console.log('    width:', canvas.width);
-    console.log('   height:', canvas.height);
+    console.log('   is XDM:', reader.isXDM);
+    console.log('    width:', w);
+    console.log('   height:', h);
     console.log('   format:', reader.depth.format);
     console.log('     near:', reader.depth.near);
     console.log('      far:', reader.depth.far);
+    console.log('in metric:', reader.depth.inMetric);
     console.log('min value:', range.min);
     console.log('max value:', range.max);
     console.log('histogram:');
 
-    var total  = canvas.width * canvas.height
-      , maxVal = histo.max.r;
-    for (var i = range.min; i <= range.max; ++i) {
+    for (var i = range.min; i <= range.max; i++) {
       var value = histo.freq.r[i]
-        , isMax = maxVal === value
+        , isMax = value === maxVal
         , prcnt = value / total * 100;
 
       console.log(  padZero(i,  3) + ':'
         , pad(prcnt.toFixed(1), 4) + '%'
         , value + (isMax ? ' *' : ''));
     }
+
+    if (reader.isXDM) {
+      // save normalized depthmap
+      reader.normalizeDepthmap();
+      image.src = reader.depth.data;
+      ctx.drawImage(image, 0, 0);
+    }
     var pathname = path.join(__dirname, 'depthmap.png');
     return saveCanvas(canvas, pathname);
+  })
+  .then(function() {
+    if (reader.xmpXapXml)
+    {
+      var pathname = path.join(__dirname, 'xmpxap.xml');
+      return saveString(reader.xmpXapXml, pathname);
+    }
+  })
+  .then(function() {
+    if (reader.xmpExtXml)
+    {
+      var pathname = path.join(__dirname, 'xmpext.xml');
+      return saveString(reader.xmpExtXml, pathname);
+    }
   })
   .catch(function(error) {
     console.error('loading failed:', error);
   });
 
 /**
-get newly created Canvas with @image drawn at
-the specified dimensions (or at original size
-if @width and @height are not specified)
+save @string to @pathname
+return: Promise
 */
-function initCanvas(image, width, height)
+function saveString(string, pathname)
 {
-  var iw = image.width
-    , ih = image.height
-    , w  = width  || iw
-    , h  = height || ih
-    , canvas
-    , ctx;
-
-  if (w < iw && h < ih)
-  {
-    canvas = new Canvas(iw, ih);
-    ctx    = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0);
-    return downscaleCanvas(canvas, w, h);
-  }
-  else {
-    canvas = new Canvas(w, h);
-    ctx    = canvas.getContext('2d');
-    ctx.imageSmoothingEnabled =
-                w !== iw || h !== ih;
-    ctx.drawImage(image, 0, 0, w, h);
-    return canvas;
-  }
+  return new Promise(function(resolve, reject) {
+    try {
+      fs.writeFile(pathname, string, function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    } catch (err) {
+      var msg = 'saveString failed: ' + err.message;
+      reject(new Error(msg));
+    }
+  });
 }
 
 /**
@@ -116,152 +138,6 @@ function saveCanvas(canvas, pathname)
       reject(new Error(msg));
     }
   });
-}
-
-// taken from http://stackoverflow.com/questions/18922880/html5-canvas-resize-downscale-image-high-quality
-// @width and @height must have same aspect ratio as @canvas
-function downscaleCanvas(canvas, width, height)
-{
-  var sw = canvas.width  // source image width
-    , sh = canvas.height // source image height
-    , tw = width         // target image width
-    , th = height        // target image height
-
-    , wh = tw * th
-    , ds = tw / sw   // downscale
-    , ss = ds * ds   // = area of a source pixel within target
-    , sx, sy, si, pi // source x,y, index within source array
-    , tx, ty, ti, yi // target x,y, index within target array
-    , tX, tY         // floored tx,ty
-
-    // weight is weight of current source point within target, next
-    // weight is weight of current source point within next target
-    , w,  nw
-    , wx, nwx // weight/next weight x,y
-    , wy, nwy
-
-    , cx // does scaled pixel cross its current pixel right  border?
-    , cy // does scaled pixel cross its current pixel bottom border?
-
-    , ctx  = canvas.getContext('2d')
-    , img  = ctx.getImageData(0, 0, sw, sh)
-    , tbuf = new Float32Array(3 * sw * sh)  // target buffer Float32 rgb
-    , sbuf = img.data                       // source buffer  8-bit rgba
-    , sR, sG, sB;                           // source current point rgb
-
-  for (si = 0, sy = 0; sy < sh; sy++)
-  {
-    ty = sy * ds;     // source y position within target
-    tY = 0  | ty;     // floored target pixel y
-    yi = tw * tY * 3; // line index within target array
-
-    cy = tY !== (0 | (ty + ds));
-    if (cy) // if pixel is crossing bottom target pixel
-    {
-      wy  = tY + 1  - ty;     // weight of point within target pixel
-      nwy = ty + ds - tY - 1; // ... within y+1 target pixel
-    }
-
-    for (sx = 0; sx < sw; sx++, si += 4)
-    {
-      tx = sx * ds;     // source x position within target
-      tX = 0  | tx;     // floored target pixel x
-      ti = yi + tX * 3; // target pixel index within target array
-
-      cx = tX !== (0 | (tx + ds));
-      if (cx) // if pixel is crossing target pixel's right
-      {
-        wx  = tX + 1  - tx;     // weight of point within target pixel
-        nwx = tx + ds - tX - 1; // ... within x+1 target pixel
-      }
-
-      // get rgb for current source pixel
-      sR = sbuf[si    ];
-      sG = sbuf[si + 1];
-      sB = sbuf[si + 2];
-
-      if (!cx && !cy) // pixel does not cross
-      {
-        // just add components weighted by squared scale
-        tbuf[ti    ] += sR * ss;
-        tbuf[ti + 1] += sG * ss;
-        tbuf[ti + 2] += sB * ss;
-      }
-      else if (cx && !cy) // cross on X only
-      {
-        // add weighted components for current pixel
-        w = wx * ds;
-        tbuf[ti    ] += sR * w;
-        tbuf[ti + 1] += sG * w;
-        tbuf[ti + 2] += sB * w;
-
-        // add weighted components for next (tX+1) pixel
-        nw = nwx * ds;
-        tbuf[ti + 3] += sR * nw;
-        tbuf[ti + 4] += sG * nw;
-        tbuf[ti + 5] += sB * nw;
-      }
-      else if (!cx && cy) // cross on Y only
-      {
-        // add weighted components for current pixel
-        w = wy * ds;
-        tbuf[ti    ] += sR * w;
-        tbuf[ti + 1] += sG * w;
-        tbuf[ti + 2] += sB * w;
-
-        // add weighted component for next (tY+1) pixel
-        nw = nwy * ds;
-        pi = ti  + 3 * tw;
-        tbuf[pi    ] += sR * nw;
-        tbuf[pi + 1] += sG * nw;
-        tbuf[pi + 2] += sB * nw;
-      }
-      else // crosses both X and Y (4 target points involved)
-      {
-        // add weighted components for current pixel
-        w = wx * wy;
-        tbuf[ti    ] += sR * w;
-        tbuf[ti + 1] += sG * w;
-        tbuf[ti + 2] += sB * w;
-
-        // for tX+1, tY pixel
-        nw = nwx * wy;
-        tbuf[ti + 3] += sR * nw;
-        tbuf[ti + 4] += sG * nw;
-        tbuf[ti + 5] += sB * nw;
-
-        // for tX, tY+1 pixel
-        nw = wx * nwy;
-        pi = ti + 3 * tw;
-        tbuf[pi    ] += sR * nw;
-        tbuf[pi + 1] += sG * nw;
-        tbuf[pi + 2] += sB * nw;
-
-        // for tX+1, tY+1 pixel
-        nw = nwx * nwy;
-        tbuf[pi + 3] += sR * nw;
-        tbuf[pi + 4] += sG * nw;
-        tbuf[pi + 5] += sB * nw;
-      }
-    } // end for sx
-  }   // end for sy
-
-  // create result canvas
-  canvas = new Canvas(tw, th);
-  ctx    = canvas.getContext('2d');
-  img    = ctx.getImageData(0, 0, tw, th);
-  sbuf   = img.data;
-
-  // convert Float32Array into Uint8ClampedArray
-  for (pi = si = ti = 0; pi < wh; pi++, si += 3, ti += 4)
-  {
-    sbuf[ti    ] = 0 | tbuf[si    ];
-    sbuf[ti + 1] = 0 | tbuf[si + 1];
-    sbuf[ti + 2] = 0 | tbuf[si + 2];
-    sbuf[ti + 3] = 255;
-  }
-  ctx.putImageData(img, 0, 0);
-  return canvas;
 }
 
 /**

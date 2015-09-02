@@ -10,17 +10,22 @@ Copyright (c)2015 Intel Corporation
   var root = this // _window_ if in browser
     , Promise
     , XMLHttpRequest
-    , DOMParser;
+    , DOMParser
+    , Canvas
+    , Image;
 
   if ('object' === typeof exports) { // Node.js
     Promise        = require('rsvp').Promise;
     XMLHttpRequest = require('xhr2');
     DOMParser      = require('xmldom').DOMParser;
+    Canvas         = require('canvas');
+    Image          = Canvas.Image;
   } else { // browser
     Promise        = root.Promise ||
                      root.RSVP.Promise;
     XMLHttpRequest = root.XMLHttpRequest;
     DOMParser      = root.DOMParser;
+    Image          = root.Image;
   }
 
   var DepthReader = function() {
@@ -86,6 +91,12 @@ Copyright (c)2015 Intel Corporation
         }
       }
     }
+    if (this.debug) {
+      // expose for inspection
+      this.xmpXapXml = xmpXapXml;
+      this.xmpExtXml = xmpExtXml;
+    }
+
     var extDescElt = getDescElt(xmpExtXml)
       , imageNS    = extDescElt.getAttribute('xmlns:Image') ||
                      extDescElt.getAttribute('xmlns:GImage');
@@ -102,41 +113,40 @@ Copyright (c)2015 Intel Corporation
   };
 
   function parseXDM(self, imageNS, extDescElt) {
-    var depthNS  = extDescElt.getAttribute('xmlns:Depthmap')
-      , cameraNS = extDescElt.getAttribute('xmlns:Camera')
-      , imageElt = extDescElt.getElementsByTagNameNS(cameraNS, 'Image'   )[0]
-      , depthElt = extDescElt.getElementsByTagNameNS(cameraNS, 'DepthMap')[0]
-      , descElt  = depthElt.firstChild.nextSibling; // rdf:Description
+    var cameraNS = extDescElt.getAttribute('xmlns:Camera')
+      ,  depthNS = extDescElt.getAttribute('xmlns:Depthmap')
+      , imageElt = findChild(extDescElt, cameraNS, 'Image')
+      , depthElt = findChild(extDescElt, cameraNS, 'DepthMap');
 
-    self.depth.inMetric = parseBool(descElt.getAttributeNS(depthNS, 'Metric'));
-    self.depth.format   =           descElt.getAttributeNS(depthNS, 'Format');
-    self.depth.near     =          +descElt.getAttributeNS(depthNS, 'Near');
-    self.depth.far      =          +descElt.getAttributeNS(depthNS, 'Far');
+    self.depth.inMetric = parseBool(childValue(depthElt, depthNS, 'Metric'));
+    self.depth.format   =           childValue(depthElt, depthNS, 'Format');
+    self.depth.near     =          +childValue(depthElt, depthNS, 'Near');
+    self.depth.far      =          +childValue(depthElt, depthNS, 'Far');
 
-    self.image.mime = imageElt.getAttributeNS(imageNS, 'Mime');
-    self.depth.mime =  descElt.getAttributeNS(depthNS, 'Mime');
-    self.image.data = imageElt.getAttributeNS(imageNS, 'Data');
-    self.depth.data =  descElt.getAttributeNS(depthNS, 'Data');
+    self.image.mime = childValue(imageElt, imageNS, 'Mime');
+    self.depth.mime = childValue(depthElt, depthNS, 'Mime');
+    self.image.data = childValue(imageElt, imageNS, 'Data');
+    self.depth.data = childValue(depthElt, depthNS, 'Data');
   }
 
   function parseLensBlur(self, imageNS, extDescElt, xapDescElt) {
     var focusNS = xapDescElt.getAttribute('xmlns:GFocus')
       , depthNS = extDescElt.getAttribute('xmlns:GDepth');
 
-    self.focus.focalPointX    = +xapDescElt.getAttributeNS(focusNS, 'FocalPointX');
-    self.focus.focalPointY    = +xapDescElt.getAttributeNS(focusNS, 'FocalPointY');
-    self.focus.focalDistance  = +xapDescElt.getAttributeNS(focusNS, 'FocalDistance');
-    self.focus.blurAtInfinity = +xapDescElt.getAttributeNS(focusNS, 'BlurAtInfinity');
+    self.focus.focalPointX    = +attrValue(xapDescElt, focusNS, 'FocalPointX');
+    self.focus.focalPointY    = +attrValue(xapDescElt, focusNS, 'FocalPointY');
+    self.focus.focalDistance  = +attrValue(xapDescElt, focusNS, 'FocalDistance');
+    self.focus.blurAtInfinity = +attrValue(xapDescElt, focusNS, 'BlurAtInfinity');
 
     self.depth.inMetric = true; // assume metric as it's unspecified
-    self.depth.format   =  xapDescElt.getAttributeNS(depthNS, 'Format');
-    self.depth.near     = +xapDescElt.getAttributeNS(depthNS, 'Near');
-    self.depth.far      = +xapDescElt.getAttributeNS(depthNS, 'Far');
+    self.depth.format   =  attrValue(xapDescElt, depthNS, 'Format');
+    self.depth.near     = +attrValue(xapDescElt, depthNS, 'Near');
+    self.depth.far      = +attrValue(xapDescElt, depthNS, 'Far');
 
-    self.image.mime = xapDescElt.getAttributeNS(imageNS, 'Mime');
-    self.depth.mime = xapDescElt.getAttributeNS(depthNS, 'Mime');
-    self.image.data = extDescElt.getAttributeNS(imageNS, 'Data');
-    self.depth.data = extDescElt.getAttributeNS(depthNS, 'Data');
+    self.image.mime = attrValue(xapDescElt, imageNS, 'Mime');
+    self.depth.mime = attrValue(xapDescElt, depthNS, 'Mime');
+    self.image.data = attrValue(extDescElt, imageNS, 'Data');
+    self.depth.data = attrValue(extDescElt, depthNS, 'Data');
   }
 
   // parse given XML and return x:xmpmeta
@@ -147,12 +157,33 @@ Copyright (c)2015 Intel Corporation
         , xmlDoc  = parser.parseFromString(xmpXml, 'application/xml')
         , rootElt = xmlDoc.documentElement;
 
-      // firstChild is #text node, so skip
-      return rootElt.firstChild.nextSibling  // rdf:RDF
-                    .firstChild.nextSibling; // rdf:Description
+      return firstChild(firstChild(rootElt));
     } catch (err) {
       throw new Error('cannot parse XMP XML');
     }
+  }
+
+  function firstChild(elt) {
+    // skip #text node if needed
+    for (elt = elt.firstChild;
+         elt && 1 !== elt.nodeType;
+         elt = elt.nextSibling) {
+    }
+    return elt || null;
+  }
+
+  function findChild(parent, ns, name) {
+    var elts = parent.getElementsByTagNameNS(ns, name);
+    return elts && elts[0] || null;
+  }
+
+  function childValue(parent, ns, name) {
+    var elt = findChild(parent, ns, name);
+    return elt ? elt.textContent : '';
+  }
+
+  function attrValue(elt, ns, name) {
+    return elt.getAttributeNS(ns, name) || '';
   }
 
   // make image.data a data URI
@@ -247,6 +278,62 @@ Copyright (c)2015 Intel Corporation
       };
       xhr.send();
     });
+  };
+
+  /*
+  normalize the depthmap so that depth
+  values are scaled between 0 and 255
+  (overwrites the original depth.data)
+  */
+  DepthReader.prototype.normalizeDepthmap = function() {
+    if (!this.depth.data ||
+         this.depth._normalized) {
+      return;
+    }
+    var canvas
+      , image = new Image;
+    image.src = this.depth.data;
+    var w = image.width
+      , h = image.height;
+
+    if (Canvas) { // Node.js
+      canvas = new Canvas(w, h);
+    } else { // browser
+      canvas = document.createElement('canvas');
+      canvas.width  = w;
+      canvas.height = h;
+    }
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(image, 0, 0);
+    var pixels = ctx.getImageData(0, 0, w, h)
+      , data   = pixels.data
+      , len    = data.length
+      , min    = 255
+      , max    = 0
+      , val, norm, prev, i, j;
+
+    // get min/max depth values
+    for (i = 0; i < len; i += 4) {
+      val = data[i];
+      if (val > max) {max = val;}
+      if (val < min) {min = val;}
+    }
+    // --min so all values > 0
+    var spread = max - (--min);
+    for (i = 0; i < len; i += 4) {
+      val = data[i];
+      if (prev !== val) {
+        norm = Math.round((val - min) / spread * 255);
+        prev = val;
+      }
+      // modify R,G,B not alpha
+      for (j = 0; j < 3; j++) {
+        data[i + j] = norm;
+      }
+    }
+    ctx.putImageData(pixels, 0, 0);
+    this.depth.data = canvas.toDataURL();
+    this.depth._normalized = true;
   };
 
   if ('object' === typeof exports) {

@@ -37,8 +37,8 @@
         reader.isXDM.should.be.true;
       });
 
-      it('should have set image.mime to "image/png"', function() {
-        reader.image.mime.should.equal('image/png');
+      it('should have set image.mime to "image/jpeg"', function() {
+        reader.image.mime.should.equal('image/jpeg');
       });
 
       it('should have set image.data to a data URI', function() {
@@ -46,26 +46,26 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image at 3200x2400', function() {
+      it('should have reference image at 2965x2254', function() {
         image.src = reader.image.data;
-        image.width.should.equal(3200);
-        image.height.should.equal(2400);
+        image.width.should.equal(2965);
+        image.height.should.equal(2254);
       });
 
       it('should have set depth.inMetric to false', function() {
         reader.depth.inMetric.should.be.false;
       });
 
-      it('should have set depth.format to "RangeInverse"', function() {
-        reader.depth.format.should.equal('RangeInverse');
+      it('should have set depth.format to "RangeLinear"', function() {
+        reader.depth.format.should.equal('RangeLinear');
       });
 
       it('should have set depth.near to 0.0', function() {
         reader.depth.near.should.equal(0.0);
       });
 
-      it('should have set depth.far to 0.0', function() {
-        reader.depth.far.should.equal(0.0);
+      it('should have set depth.far to 65535.0', function() {
+        reader.depth.far.should.equal(65535.0);
       });
 
       it('should have set depth.mime to "image/png"', function() {
@@ -77,10 +77,11 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image at 480x360', function() {
+      it('should have depthmap image at 472x352', function() {
+        reader.normalizeDepthmap();
         image.src = reader.depth.data;
-        image.width.should.equal(480);
-        image.height.should.equal(360);
+        image.width.should.equal(472);
+        image.height.should.equal(352);
       });
     });
 
