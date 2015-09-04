@@ -27,11 +27,16 @@ if run inside PhantomJS.
 First install the dependencies:
 
 The Node.js example and tests require the `Canvas` module, which in turn depends
-on the Cairo graphics library.
-Follow these [install instructions](https://github.com/LearnBoost/node-canvas/wiki)
+on the `Cairo` graphics library.
+Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki)
 prior to running `npm install`.
 
     npm install
+
+If you are having trouble compiling `Cairo` or installing the `Canvas` module on
+Windows, you can, alternatively, download a snapshot of the
+[node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
+folder.
 
 Then include or require them:
 

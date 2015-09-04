@@ -24,7 +24,7 @@
   describe('DepthReader Class', function() {
     var baseUrl = 'http://localhost:9000/images/';
 
-    context('"xdm-photo1.jpg" (XDM Beta)', function() {
+    context('"xdm-photo1.jpg" (XDM v1.0)', function() {
       var jpegUrl = baseUrl + 'xdm-photo1.jpg'
         , reader  = new DepthReader
         , image   = new Image;
