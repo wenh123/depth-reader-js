@@ -29,8 +29,9 @@ Copyright (c)2015 Intel Corporation
   }
 
   var DepthReader = function() {
-    this.isXDM = false;
-    this.image = {
+    this.isXDM    = false;
+    this.revision = 0;
+    this.image    = {
       mime: ''
     , data: null // data URI
     };
@@ -97,26 +98,28 @@ Copyright (c)2015 Intel Corporation
       this.xmpExtXml = xmpExtXml;
     }
 
-    var extDescElt = getDescElt(xmpExtXml)
+    var xapDescElt = getDescElt(xmpXapXml)
+      , extDescElt = getDescElt(xmpExtXml)
       , imageNS    = extDescElt.getAttribute('xmlns:Image') ||
                      extDescElt.getAttribute('xmlns:GImage');
 
-    if ((this.isXDM = /xdm\.org/.test(imageNS))) {
-      parseXDM(this, imageNS, extDescElt);
-    } else {
-      var xapDescElt = getDescElt(xmpXapXml);
-      parseLensBlur(this, imageNS, extDescElt
-                                 , xapDescElt);
-    }
+     this.isXDM = /xdm\.org/.test(imageNS);
+    (this.isXDM ? parseXDM : parseLensBlur).call(
+      null, this, imageNS, xapDescElt, extDescElt);
+
     makeDataURI(this.image);
     makeDataURI(this.depth);
   };
 
-  function parseXDM(self, imageNS, extDescElt) {
-    var cameraNS = extDescElt.getAttribute('xmlns:Camera')
+  function parseXDM(self, imageNS, xapDescElt, extDescElt) {
+    var deviceNS = xapDescElt.getAttribute('xmlns:Device')
+      , cameraNS = extDescElt.getAttribute('xmlns:Camera')
       ,  depthNS = extDescElt.getAttribute('xmlns:Depthmap')
-      , imageElt = findChild(extDescElt, cameraNS, 'Image')
-      , depthElt = findChild(extDescElt, cameraNS, 'DepthMap');
+      ,   revElt = findChild(xapDescElt, deviceNS, 'Revision')
+      , depthElt = findChild(extDescElt, cameraNS, 'DepthMap')
+      , imageElt = findChild(extDescElt, cameraNS, 'Image');
+
+    self.revision = +childValue(revElt, deviceNS, 'Revision');
 
     self.depth.inMetric = parseBool(childValue(depthElt, depthNS, 'Metric'));
     self.depth.format   =           childValue(depthElt, depthNS, 'Format');
@@ -129,7 +132,7 @@ Copyright (c)2015 Intel Corporation
     self.depth.data = childValue(depthElt, depthNS, 'Data');
   }
 
-  function parseLensBlur(self, imageNS, extDescElt, xapDescElt) {
+  function parseLensBlur(self, imageNS, xapDescElt, extDescElt) {
     var focusNS = xapDescElt.getAttribute('xmlns:GFocus')
       , depthNS = extDescElt.getAttribute('xmlns:GDepth');
 
@@ -153,12 +156,17 @@ Copyright (c)2015 Intel Corporation
   // -> rdf:RDF -> rdf:Description element
   function getDescElt(xmpXml) {
     try {
-      var parser  = new DOMParser
-        , xmlDoc  = parser.parseFromString(xmpXml, 'application/xml')
-        , rootElt = xmlDoc.documentElement;
+      var parser = new DOMParser
+        , xmlDoc = parser.parseFromString(xmpXml, 'application/xml')
+        , rdfElt = firstChild(xmlDoc.documentElement)
+        , rdfNS  = rdfElt.getAttribute('xmlns:rdf');
 
-      return firstChild(firstChild(rootElt));
-    } catch (err) {
+      // XDM may contain multiple rdf:Description
+      // elements where last contains device info
+      var descElts = rdfElt.getElementsByTagNameNS(rdfNS, 'Description');
+      return descElts[descElts.length - 1] || null;
+    }
+    catch (err) {
       throw new Error('cannot parse XMP XML');
     }
   }

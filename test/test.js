@@ -37,6 +37,10 @@
         reader.isXDM.should.be.true;
       });
 
+      it('should have set this.revision to 1.0', function() {
+        reader.revision.should.equal(1.0);
+      });
+
       it('should have set image.mime to "image/jpeg"', function() {
         reader.image.mime.should.equal('image/jpeg');
       });

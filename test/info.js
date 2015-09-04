@@ -33,8 +33,11 @@ reader.loadFile(fileUrl)
       , total  = w * h;
 
     console.log('Depthmap\n--------');
+    console.log('    wrote: xmpxap.xml');
+    console.log('    wrote: xmpext.xml');
     console.log('    wrote: depthmap.png');
     console.log('   is XDM:', reader.isXDM);
+    console.log(' revision:', reader.revision.toFixed(1));
     console.log('    width:', w);
     console.log('   height:', h);
     console.log('   format:', reader.depth.format);
