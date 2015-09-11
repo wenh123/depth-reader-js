@@ -1,5 +1,5 @@
 /*
-print depthmap info
+show depth file info
 node test/info [url]
 */
 
@@ -10,36 +10,71 @@ var DepthReader = require('../src/depth-reader')
   , fs          = require('fs');
 
 var fileUrl = process.argv[2] ||
-  'http://localhost:9000/images/xdm-photo1.jpg';
+      'http://localhost:9000/images/xdm-photo1.jpg'
+  , pathname
+  , canvas_
+  , canvas;
 
 var reader = new DepthReader;
 reader.debug = true; // save xmpXapXml/xmpExtXml
 
 reader.loadFile(fileUrl)
-  .then(function(reader)
-  {
-    var image = new Canvas.Image;
-    image.src = reader.depth.data
-    var w = image.width
-      , h = image.height;
-
-    var canvas = new Canvas(w, h)
-      , ctx    = canvas.getContext('2d');
-    ctx.drawImage(image, 0, 0);
-
+  .then(function() {
+    if (reader.xmpXapXml) {
+      console.log('  writing: xmpxap.xml');
+      pathname = path.join(__dirname, 'xmpxap.xml');
+      return saveString(reader.xmpXapXml, pathname);
+    }
+  })
+  .then(function() {
+    if (reader.xmpExtXml) {
+      console.log('  writing: xmpext.xml');
+      pathname = path.join(__dirname, 'xmpext.xml');
+      return saveString(reader.xmpExtXml, pathname);
+    }
+  })
+  .then(function() {
+    console.log('  writing: container.jpg');
+    canvas_  = makeCanvas(reader.fileData);
+    pathname = path.join(__dirname, 'container.jpg');
+    return saveCanvas(canvas_, pathname);
+  })
+  .then(function() {
+    console.log('  writing: reference.jpg');
+    canvas_  = makeCanvas(reader.image.data);
+    pathname = path.join(__dirname, 'reference.jpg');
+    return saveCanvas(canvas_, pathname);
+  })
+  .then(function() {
+    console.log('  writing: depthmap.png');
+    canvas = makeCanvas(reader.depth.data);
+    if (reader.isXDM) {
+      // save normalized depthmap
+      reader.normalizeDepthmap(64);
+    }
+    canvas_  = reader.isXDM ? makeCanvas(reader.depth.data) : canvas;
+    pathname = path.join(__dirname, 'depthmap.jpg');
+    return saveCanvas(canvas_, pathname);
+  })
+  .then(function() {
+    if (reader.confidence.data) {
+      console.log('  writing: confidence.png');
+      canvas_  = makeCanvas(reader.confidence.data);
+      pathname = path.join(__dirname, 'confidence.png');
+      return saveCanvas(canvas_, pathname);
+    }
+  })
+  .then(function() {
     var range  = getBrightness(canvas, true)
       , histo  = getHistogram (canvas, 'r')
       , maxVal = histo.max.r
-      , total  = w * h;
+      , total  = canvas.width
+               * canvas.height;
 
-    console.log('Depthmap\n--------');
-    console.log('    wrote: xmpxap.xml');
-    console.log('    wrote: xmpext.xml');
-    console.log('    wrote: depthmap.png');
     console.log('   is XDM:', reader.isXDM);
     console.log(' revision:', reader.revision.toFixed(1));
-    console.log('    width:', w);
-    console.log('   height:', h);
+    console.log('    width:', canvas.width);
+    console.log('   height:', canvas.height);
     console.log('   format:', reader.depth.format);
     console.log('     near:', reader.depth.near);
     console.log('      far:', reader.depth.far);
@@ -56,29 +91,6 @@ reader.loadFile(fileUrl)
       console.log(  padZero(i,  3) + ':'
         , pad(prcnt.toFixed(1), 4) + '%'
         , value + (isMax ? ' *' : ''));
-    }
-
-    if (reader.isXDM) {
-      // save normalized depthmap
-      reader.normalizeDepthmap(64);
-      image.src = reader.depth.data;
-      ctx.drawImage(image, 0, 0);
-    }
-    var pathname = path.join(__dirname, 'depthmap.png');
-    return saveCanvas(canvas, pathname);
-  })
-  .then(function() {
-    if (reader.xmpXapXml)
-    {
-      var pathname = path.join(__dirname, 'xmpxap.xml');
-      return saveString(reader.xmpXapXml, pathname);
-    }
-  })
-  .then(function() {
-    if (reader.xmpExtXml)
-    {
-      var pathname = path.join(__dirname, 'xmpext.xml');
-      return saveString(reader.xmpExtXml, pathname);
     }
   })
   .catch(function(error) {
@@ -105,6 +117,26 @@ function saveString(string, pathname)
       reject(new Error(msg));
     }
   });
+}
+
+/**
+draw image onto new canvas
+@imgSrc: Canvas.Image.src
+return: Canvas
+*/
+function makeCanvas(imgSrc)
+{
+  var image = new Canvas.Image;
+  image.src = imgSrc;
+  var w = image.width
+    , h = image.height;
+  if (!w || !h) {
+    return null;
+  }
+  var canvas = new Canvas(w, h)
+    , ctx    = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0);
+  return canvas;
 }
 
 /**

@@ -8,6 +8,7 @@ Copyright (c)2015 Intel Corporation
   'use strict';
 
   var root = this // _window_ if in browser
+    , xhrResType
     , Promise
     , XMLHttpRequest
     , DOMParser
@@ -15,12 +16,14 @@ Copyright (c)2015 Intel Corporation
     , Image;
 
   if ('object' === typeof exports) { // Node.js
+    xhrResType     = 'buffer';
     Promise        = require('rsvp').Promise;
     XMLHttpRequest = require('xhr2');
     DOMParser      = require('xmldom').DOMParser;
     Canvas         = require('canvas');
     Image          = Canvas.Image;
   } else { // browser
+    xhrResType     = 'arraybuffer';
     Promise        = root.Promise ||
                      root.RSVP.Promise;
     XMLHttpRequest = root.XMLHttpRequest;
@@ -42,6 +45,10 @@ Copyright (c)2015 Intel Corporation
     , far:      0
     , mime:     ''
     , data:     null // data URI
+    };
+    this.confidence = {
+      mime: ''
+    , data: null // data URI
     };
     this.focus = {
       focalPointX:    0
@@ -109,15 +116,18 @@ Copyright (c)2015 Intel Corporation
 
     makeDataURI(this.image);
     makeDataURI(this.depth);
+    makeDataURI(this.confidence);
   };
 
   function parseXDM(self, imageNS, xapDescElt, extDescElt) {
     var deviceNS = xapDescElt.getAttribute('xmlns:Device')
       , cameraNS = extDescElt.getAttribute('xmlns:Camera')
       ,  depthNS = extDescElt.getAttribute('xmlns:Depthmap')
+      ,  noiseNS = extDescElt.getAttribute('xmlns:NoiseModel')
       ,   revElt = findChild(xapDescElt, deviceNS, 'Revision')
+      , imageElt = findChild(extDescElt, cameraNS, 'Image')
       , depthElt = findChild(extDescElt, cameraNS, 'DepthMap')
-      , imageElt = findChild(extDescElt, cameraNS, 'Image');
+      ,  confElt = findChild(  depthElt,  noiseNS, 'Reliability');
 
     self.revision = +childValue(revElt, deviceNS, 'Revision');
 
@@ -126,10 +136,12 @@ Copyright (c)2015 Intel Corporation
     self.depth.near     =          +childValue(depthElt, depthNS, 'Near');
     self.depth.far      =          +childValue(depthElt, depthNS, 'Far');
 
-    self.image.mime = childValue(imageElt, imageNS, 'Mime');
-    self.depth.mime = childValue(depthElt, depthNS, 'Mime');
-    self.image.data = childValue(imageElt, imageNS, 'Data');
-    self.depth.data = childValue(depthElt, depthNS, 'Data');
+    self.image.mime      = childValue(imageElt, imageNS, 'Mime');
+    self.depth.mime      = childValue(depthElt, depthNS, 'Mime');
+    self.confidence.mime = childValue( confElt, imageNS, 'Mime');
+    self.image.data      = childValue(imageElt, imageNS, 'Data');
+    self.depth.data      = childValue(depthElt, depthNS, 'Data');
+    self.confidence.data = childValue( confElt, imageNS, 'Data');
   }
 
   function parseLensBlur(self, imageNS, xapDescElt, extDescElt) {
@@ -268,13 +280,17 @@ Copyright (c)2015 Intel Corporation
 
     return new Promise(function(resolve, reject) {
       var xhr = new XMLHttpRequest;
+      xhr.responseType = xhrResType;
       xhr.open('GET', fileUrl);
-      xhr.responseType = 'arraybuffer';
 
       xhr.onload = function() {
         if (this.response) {
           try { // parsing is synchronous
             self.parseFile.call(self, this.response);
+            if (self.debug) {
+              // expose for inspection
+              self.fileData = this.response;
+            }
             resolve(self);
           } catch (err) {
             reject(err);

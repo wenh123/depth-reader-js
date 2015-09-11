@@ -87,6 +87,23 @@
         image.width.should.equal(472);
         image.height.should.equal(352);
       });
+
+      it('should have set confidence.mime to "image/png"', function() {
+        reader.confidence.mime.should.equal('image/png');
+      });
+
+      it('should have set confidence.data to a data URI', function() {
+        reader.confidence.should.not.have.property('data', null);
+        reader.confidence.data.slice(0, 5).should.equal('data:');
+      });
+
+      it('should have confidence same W & H as depthmap', function() {
+        var w = image.width
+          , h = image.height;
+        image.src = reader.confidence.data;
+        image.width.should.equal(w);
+        image.height.should.equal(h);
+      });
     });
 
     context('"lbr-photo1.jpg" (Lens Blur)', function() {
