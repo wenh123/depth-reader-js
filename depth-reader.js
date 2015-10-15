@@ -1,4 +1,4 @@
-/*
+/*!
 MIT Licensed
 https://github.com/DavisReef/depth-reader-js
 XDM 1.0 spec: https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10

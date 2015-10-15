@@ -18,24 +18,24 @@ if run inside PhantomJS.
 ## Dependencies
 
  - [RSVP.js](https://github.com/tildeio/rsvp.js) *(polyfill for Promise)*
- - [node-xhr2](https://github.com/pwnall/node-xhr2) *(polyfill for XMLHttpRequest in Node.js)*
  - [XMLDOM](https://github.com/jindw/xmldom) *(polyfill for DOMParser in Node.js)*
+ - [node-xhr2](https://github.com/pwnall/node-xhr2) *(polyfill for XMLHttpRequest in Node.js)*
+ - [node-canvas](https://github.com/Automattic/node-canvas) *(polyfill for HTML5 canvas in Node.js)*
 
 ## Usage
 
-First install the dependencies:
+Unless previously installed, you'll need the **Cairo** graphics library.
+Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki/_pages)
+before continuing.
 
-The Node.js example and tests require the `Canvas` module, which in turn depends
-on the `Cairo` graphics library.
-Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki)
-prior to running `npm install`.
-
-    npm install
-
-If you are having trouble compiling `Cairo` or installing the `Canvas` module on
-Windows, you can, alternatively, download a snapshot of the
+If you are having trouble compiling `Cairo` or installing the `Canvas`
+module on Windows, you can, alternatively, download a snapshot of the
 [node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
 folder.
+
+    bower install depth-reader --save
+or
+    npm install depth-reader --save
 
 Then include or require them:
 
@@ -74,6 +74,13 @@ Example:
         .catch(function(error) {
             console.error('loading failed:', error);
         });
+
+## Development
+
+To contribute to the development of this package and to run the unit tests,
+you'll need to install the dev dependencies first:
+
+    npm install
 
 ## Tests
 

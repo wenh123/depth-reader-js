@@ -5,7 +5,8 @@
   "keywords": [
     "XDM",
     "LensBlur",
-    "depthmap"
+    "depthmap",
+    "RealSense"
   ],
   "homepage": "https://github.com/DavisReef/depth-reader-js",
   "license": "MIT",

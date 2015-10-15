@@ -91,7 +91,7 @@ module.exports = function(grunt) {
     },
 
     /**
-     * Lint Javascript
+     * Lint JavaScript
      */
     jshint: {
       options: {
@@ -112,11 +112,32 @@ module.exports = function(grunt) {
         },
         src: ['test/*.js']
       }
+    },
+
+    /**
+     * Compress JavaScript
+     */
+    uglify: {
+      options: {
+        preserveComments: 'some',
+        sourceMap: true
+      },
+      my_target: {
+        files: {
+          'depth-reader.min.js': ['depth-reader.js']
+        }
+      }
     }
   });
 
+  grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-connect');
   grunt.loadNpmTasks('grunt-mocha-phantomjs');
+
+  grunt.registerTask('build', [
+    'jshint:src',
+    'uglify'
+  ]);
 
   grunt.registerTask('serve', [
     'connect:all:keepalive'
