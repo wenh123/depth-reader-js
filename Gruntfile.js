@@ -8,8 +8,7 @@ module.exports = function(grunt) {
   require('time-grunt')(grunt);
 
   var pkg        = require('./package')
-    , klei       = require('./klei')
-    , modulename = klei.name || pkg.title || pkg.name;
+    , modulename = pkg.title || pkg.name;
 
   grunt.initConfig({
     pkg:        pkg,

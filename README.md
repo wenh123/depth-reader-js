@@ -9,9 +9,8 @@ The XDM 1.0 spec was jointly developed by Intel and Google, and is available on 
 [Intel Developer Zone](https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10).
 
 :exclamation: This library does not currently parse all metadata described by the
-spec as it only extracts the primary RGB image and the depthmap image. However, it
-is hoped that this project will evolve into a generic reader and possibly a writer
-as well in the near future.
+spec. However, it's hoped that this project will evolve into a generic reader and
+possibly a writer as well in the near future.
 
 This library may be used in both browser and Node.js projects, but some tests fail
 if run inside PhantomJS.
@@ -94,7 +93,6 @@ Print depthmap information (run HTTP server in separate console):
 ## Authors
 
   - Erhhung Yuan <erhhung.yuan@intel.com>
-  - Yu Bai <yu.bai@intel.com>
 
 ## License
 

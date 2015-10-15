@@ -1,7 +1,7 @@
 {
-  "name": "depth-reader-js",
+  "name": "depth-reader",
   "description": "XDM (eXtensible Device Metadata) JPEG file reader",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "keywords": [
     "XDM",
     "LensBlur",
@@ -14,10 +14,6 @@
     "name": "Erhhung Yuan",
     "email": "erhhung.yuan@intel.com"
   },
-  "contributors": [{
-    "name": "Yu Bai",
-    "email": "yu.bai@intel.com"
-  }],
   "dependencies": {
     "rsvp": "^3.0.21",
     "xhr2": "^0.1.3",

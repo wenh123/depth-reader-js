@@ -13,7 +13,8 @@ var fileUrl = process.argv[2] ||
       'http://localhost:9000/images/xdm-photo1.jpg'
   , pathname
   , canvas_
-  , canvas;
+  , canvas
+  , sizes = {};
 
 var reader = new DepthReader;
 reader.debug = true; // save xmpXapXml/xmpExtXml
@@ -35,13 +36,21 @@ reader.loadFile(fileUrl)
   })
   .then(function() {
     console.log('  writing: container.jpg');
-    canvas_  = makeCanvas(reader.fileData);
+    canvas_ = makeCanvas(reader.fileData);
+    sizes.container = {
+      width:  canvas_.width
+    , height: canvas_.height
+    };
     pathname = path.join(__dirname, 'container.jpg');
     return saveCanvas(canvas_, pathname);
   })
   .then(function() {
     console.log('  writing: reference.jpg');
-    canvas_  = makeCanvas(reader.image.data);
+    canvas_ = makeCanvas(reader.image.data);
+    sizes.reference = {
+      width:  canvas_.width
+    , height: canvas_.height
+    };
     pathname = path.join(__dirname, 'reference.jpg');
     return saveCanvas(canvas_, pathname);
   })
@@ -52,14 +61,22 @@ reader.loadFile(fileUrl)
       // save normalized depthmap
       reader.normalizeDepthmap(64);
     }
-    canvas_  = reader.isXDM ? makeCanvas(reader.depth.data) : canvas;
-    pathname = path.join(__dirname, 'depthmap.jpg');
+    canvas_ = reader.isXDM ? makeCanvas(reader.depth.data) : canvas;
+    sizes.depthmap = {
+      width:  canvas_.width
+    , height: canvas_.height
+    };
+    pathname = path.join(__dirname, 'depthmap.png');
     return saveCanvas(canvas_, pathname);
   })
   .then(function() {
     if (reader.confidence.data) {
       console.log('  writing: confidence.png');
-      canvas_  = makeCanvas(reader.confidence.data);
+      canvas_ = makeCanvas(reader.confidence.data);
+      sizes.confidence = {
+        width:  canvas_.width
+      , height: canvas_.height
+      };
       pathname = path.join(__dirname, 'confidence.png');
       return saveCanvas(canvas_, pathname);
     }
@@ -73,12 +90,14 @@ reader.loadFile(fileUrl)
 
     console.log('   is XDM:', reader.isXDM);
     console.log(' revision:', reader.revision.toFixed(1));
-    console.log('    width:', canvas.width);
-    console.log('   height:', canvas.height);
+    console.log('reference: %dx%d', sizes.reference.width
+                                  , sizes.reference.height);
+    console.log(' depthmap: %dx%d', sizes.depthmap.width
+                                  , sizes.depthmap.height);
+    console.log('   metric:', reader.depth.metric);
     console.log('   format:', reader.depth.format);
     console.log('     near:', reader.depth.near);
     console.log('      far:', reader.depth.far);
-    console.log('in metric:', reader.depth.inMetric);
     console.log('min value:', range.min);
     console.log('max value:', range.max);
     console.log('histogram:');

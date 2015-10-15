@@ -34,27 +34,59 @@ Copyright (c)2015 Intel Corporation
   var DepthReader = function() {
     this.isXDM    = false;
     this.revision = 0;
-    this.image    = {
-      mime: ''
-    , data: null // data URI
+    this.device   = {
+      vendor: {
+        manufacturer: ''
+      , model:        ''
+      }
+    , pose: {
+        latitude:  0
+      , longitude: 0
+      , altitude:  0
+      }
     };
-    this.depth = {
-      inMetric: false // unit is meter if true
-    , format:   '' // RangeInverse/RangeLinear
-    , near:     0
-    , far:      0
-    , mime:     ''
-    , data:     null // data URI
+    this.camera = {
+      vendor: {
+        manufacturer: ''
+      , model:        ''
+      }
+    , pose: {
+        positionX:     0
+      , positionY:     0
+      , positionZ:     0
+      , rotationAxisX: 0
+      , rotationAxisY: 0
+      , rotationAxisZ: 0
+      , rotationAngle: 0
+      }
     };
-    this.confidence = {
-      mime: ''
-    , data: null // data URI
+    this.perspective = { // XDM
+      focalLengthX:    0
+    , focalLengthY:    0
+    , principalPointX: 0
+    , principalPointY: 0
     };
-    this.focus = {
+    this.focus = { // Lens Blur
       focalPointX:    0
     , focalPointY:    0
     , focalDistance:  0
     , blurAtInfinity: 0
+    };
+    this.image = {
+      mime: ''
+    , data: null // data URI
+    };
+    this.depth = {
+      metric: false // unit is meter if true
+    , format: '' // RangeInverse/RangeLinear
+    , near:   0
+    , far:    0
+    , mime:   ''
+    , data:   null // data URI
+    };
+    this.confidence = {
+      mime: ''
+    , data: null // data URI
     };
   };
 
@@ -105,10 +137,10 @@ Copyright (c)2015 Intel Corporation
       this.xmpExtXml = xmpExtXml;
     }
 
-    var xapDescElt = getDescElt(xmpXapXml)
-      , extDescElt = getDescElt(xmpExtXml)
-      , imageNS    = extDescElt.getAttribute('xmlns:Image') ||
-                     extDescElt.getAttribute('xmlns:GImage');
+    var xapDescElt = parseRDF(xmpXapXml)
+      , extDescElt = parseRDF(xmpExtXml)
+      , imageNS    = getNS(extDescElt, 'Image') ||
+                     getNS(extDescElt, 'GImage');
 
      this.isXDM = /xdm\.org/.test(imageNS);
     (this.isXDM ? parseXDM : parseLensBlur).call(
@@ -120,43 +152,119 @@ Copyright (c)2015 Intel Corporation
   };
 
   function parseXDM(self, imageNS, xapDescElt, extDescElt) {
-    var deviceNS = xapDescElt.getAttribute('xmlns:Device')
-      , cameraNS = extDescElt.getAttribute('xmlns:Camera')
-      ,  depthNS = extDescElt.getAttribute('xmlns:Depthmap')
-      ,  noiseNS = extDescElt.getAttribute('xmlns:NoiseModel')
-      ,   revElt = findChild(xapDescElt, deviceNS, 'Revision')
-      , imageElt = findChild(extDescElt, cameraNS, 'Image')
-      , depthElt = findChild(extDescElt, cameraNS, 'DepthMap')
-      ,  confElt = findChild(  depthElt,  noiseNS, 'Reliability');
+    /*
+    XDM metadata are usually encoded using the Adobe XMP Toolkit,
+    but the XMP serializer, for reasons not entirely understood--
+    perhaps for compression, sometimes encodes properties as XML
+    attributes instead of child elements; so we must handle both
+    structural forms.
+    */
+    var   vendorNS = getNS(extDescElt, 'VendorInfo')
+      ,  devPoseNS = getNS(extDescElt, 'DevicePose') ||
+                     getNS(xapDescElt, 'DevicePose')
+      ,  camPoseNS = getNS(extDescElt, 'CameraPose')
+      ,   deviceNS = getNS(extDescElt, 'Device') ||
+                     getNS(xapDescElt, 'Device')
+      ,   cameraNS = getNS(extDescElt, 'Camera')
+      ,    depthNS = getNS(extDescElt, 'Depthmap')
+      ,    noiseNS = getNS(extDescElt, 'NoiseModel')
+      , perspectNS = getNS(extDescElt, 'PerspectiveModel');
 
-    self.revision = +childValue(revElt, deviceNS, 'Revision');
+    var  xdmRevElt = findChild(xapDescElt, deviceNS, 'Revision')
+      , devVendElt = findChild(extDescElt, deviceNS, 'VendorInfo') ||
+                     findChild(xapDescElt, deviceNS, 'VendorInfo')
+      , camVendElt = findChild(extDescElt, cameraNS, 'VendorInfo')
+      , devPoseElt = findChild(extDescElt, deviceNS, 'Pose') ||
+                     findChild(xapDescElt, deviceNS, 'Pose')
+      , camPoseElt = findChild(extDescElt, cameraNS, 'Pose')
+      , imagingElt = lastDesc(
+                     findChild(extDescElt, cameraNS, 'ImagingModel'))
+      ,   imageElt = findChild(extDescElt, cameraNS, 'Image')
+      ,   depthElt = lastDesc(
+                     findChild(extDescElt, cameraNS, 'DepthMap'))
+      ,  confidElt = findChild(  depthElt,  noiseNS, 'Reliability');
 
-    self.depth.inMetric = parseBool(childValue(depthElt, depthNS, 'Metric'));
-    self.depth.format   =           childValue(depthElt, depthNS, 'Format');
-    self.depth.near     =          +childValue(depthElt, depthNS, 'Near');
-    self.depth.far      =          +childValue(depthElt, depthNS, 'Far');
+    self.revision = +attrValue(extDescElt, deviceNS, 'Revision') ||
+                   +childValue( xdmRevElt, deviceNS, 'Revision') ||
+                    +elemValue( xdmRevElt);
 
-    self.image.mime      = childValue(imageElt, imageNS, 'Mime');
-    self.depth.mime      = childValue(depthElt, depthNS, 'Mime');
-    self.confidence.mime = childValue( confElt, imageNS, 'Mime');
-    self.image.data      = childValue(imageElt, imageNS, 'Data');
-    self.depth.data      = childValue(depthElt, depthNS, 'Data');
-    self.confidence.data = childValue( confElt, imageNS, 'Data');
+    self.device.vendor.manufacturer = attrValue(devVendElt, vendorNS, 'Manufacturer') ||
+                                     childValue(devVendElt, vendorNS, 'Manufacturer');
+    self.camera.vendor.manufacturer = attrValue(camVendElt, vendorNS, 'Manufacturer') ||
+                                     childValue(camVendElt, vendorNS, 'Manufacturer');
+    self.device.vendor.model        = attrValue(devVendElt, vendorNS, 'Model') ||
+                                     childValue(devVendElt, vendorNS, 'Model');
+    self.camera.vendor.model        = attrValue(camVendElt, vendorNS, 'Model') ||
+                                     childValue(camVendElt, vendorNS, 'Model');
+
+    self.device.pose.latitude  = +attrValue(devPoseElt, devPoseNS, 'Latitude') ||
+                                +childValue(devPoseElt, devPoseNS, 'Latitude');
+    self.device.pose.longitude = +attrValue(devPoseElt, devPoseNS, 'Longitude') ||
+                                +childValue(devPoseElt, devPoseNS, 'Longitude');
+    self.device.pose.altitude  = +attrValue(devPoseElt, devPoseNS, 'Altitude') ||
+                                +childValue(devPoseElt, devPoseNS, 'Altitude');
+
+    self.camera.pose.positionX = +attrValue(camPoseElt, camPoseNS, 'PositionX') ||
+                                +childValue(camPoseElt, camPoseNS, 'PositionX');
+    self.camera.pose.positionY = +attrValue(camPoseElt, camPoseNS, 'PositionY') ||
+                                +childValue(camPoseElt, camPoseNS, 'PositionY');
+    self.camera.pose.positionZ = +attrValue(camPoseElt, camPoseNS, 'PositionZ') ||
+                                +childValue(camPoseElt, camPoseNS, 'PositionZ');
+
+    self.camera.pose.rotationAxisX = +attrValue(camPoseElt, camPoseNS, 'RotationAxisX') ||
+                                    +childValue(camPoseElt, camPoseNS, 'RotationAxisX');
+    self.camera.pose.rotationAxisY = +attrValue(camPoseElt, camPoseNS, 'RotationAxisY') ||
+                                    +childValue(camPoseElt, camPoseNS, 'RotationAxisY');
+    self.camera.pose.rotationAxisZ = +attrValue(camPoseElt, camPoseNS, 'RotationAxisZ') ||
+                                    +childValue(camPoseElt, camPoseNS, 'RotationAxisZ');
+    self.camera.pose.rotationAngle = +attrValue(camPoseElt, camPoseNS, 'RotationAngle') ||
+                                    +childValue(camPoseElt, camPoseNS, 'RotationAngle');
+
+    self.perspective.focalLengthX    = +attrValue(imagingElt, perspectNS, 'FocalLengthX') ||
+                                      +childValue(imagingElt, perspectNS, 'FocalLengthX');
+    self.perspective.focalLengthY    = +attrValue(imagingElt, perspectNS, 'FocalLengthY') ||
+                                      +childValue(imagingElt, perspectNS, 'FocalLengthY');
+    self.perspective.principalPointX = +attrValue(imagingElt, perspectNS, 'PrincipalPointX') ||
+                                      +childValue(imagingElt, perspectNS, 'PrincipalPointX');
+    self.perspective.principalPointY = +attrValue(imagingElt, perspectNS, 'PrincipalPointY') ||
+                                      +childValue(imagingElt, perspectNS, 'PrincipalPointY');
+
+    self.depth.metric = parseBool(
+                         attrValue(depthElt, depthNS, 'Metric') ||
+                        childValue(depthElt, depthNS, 'Metric'));
+    self.depth.format =  attrValue(depthElt, depthNS, 'Format') ||
+                        childValue(depthElt, depthNS, 'Format');
+    self.depth.near   = +attrValue(depthElt, depthNS, 'Near') ||
+                       +childValue(depthElt, depthNS, 'Near');
+    self.depth.far    = +attrValue(depthElt, depthNS, 'Far') ||
+                       +childValue(depthElt, depthNS, 'Far');
+
+    self.image.mime      = attrValue( imageElt, imageNS, 'Mime') ||
+                          childValue( imageElt, imageNS, 'Mime');
+    self.depth.mime      = attrValue( depthElt, depthNS, 'Mime') ||
+                          childValue( depthElt, depthNS, 'Mime');
+    self.confidence.mime = attrValue(confidElt, imageNS, 'Mime') ||
+                          childValue(confidElt, imageNS, 'Mime');
+    self.image.data      = attrValue( imageElt, imageNS, 'Data') ||
+                          childValue( imageElt, imageNS, 'Data');
+    self.depth.data      = attrValue( depthElt, depthNS, 'Data') ||
+                          childValue( depthElt, depthNS, 'Data');
+    self.confidence.data = attrValue(confidElt, imageNS, 'Data') ||
+                          childValue(confidElt, imageNS, 'Data');
   }
 
   function parseLensBlur(self, imageNS, xapDescElt, extDescElt) {
-    var focusNS = xapDescElt.getAttribute('xmlns:GFocus')
-      , depthNS = extDescElt.getAttribute('xmlns:GDepth');
+    var depthNS = getNS(extDescElt, 'GDepth')
+      , focusNS = getNS(xapDescElt, 'GFocus');
 
     self.focus.focalPointX    = +attrValue(xapDescElt, focusNS, 'FocalPointX');
     self.focus.focalPointY    = +attrValue(xapDescElt, focusNS, 'FocalPointY');
     self.focus.focalDistance  = +attrValue(xapDescElt, focusNS, 'FocalDistance');
     self.focus.blurAtInfinity = +attrValue(xapDescElt, focusNS, 'BlurAtInfinity');
 
-    self.depth.inMetric = true; // assume metric as it's unspecified
-    self.depth.format   =  attrValue(xapDescElt, depthNS, 'Format');
-    self.depth.near     = +attrValue(xapDescElt, depthNS, 'Near');
-    self.depth.far      = +attrValue(xapDescElt, depthNS, 'Far');
+    self.depth.format =  attrValue(xapDescElt, depthNS, 'Format');
+    self.depth.near   = +attrValue(xapDescElt, depthNS, 'Near');
+    self.depth.far    = +attrValue(xapDescElt, depthNS, 'Far');
 
     self.image.mime = attrValue(xapDescElt, imageNS, 'Mime');
     self.depth.mime = attrValue(xapDescElt, depthNS, 'Mime');
@@ -164,46 +272,61 @@ Copyright (c)2015 Intel Corporation
     self.depth.data = attrValue(extDescElt, depthNS, 'Data');
   }
 
+  function getNS(elt, name) {
+    return elt && elt.getAttribute('xmlns:' + name) || '';
+  }
+
   // parse given XML and return x:xmpmeta
   // -> rdf:RDF -> rdf:Description element
-  function getDescElt(xmpXml) {
+  function parseRDF(xmpXml) {
     try {
       var parser = new DOMParser
-        , xmlDoc = parser.parseFromString(xmpXml, 'application/xml')
-        , rdfElt = firstChild(xmlDoc.documentElement)
-        , rdfNS  = rdfElt.getAttribute('xmlns:rdf');
-
-      // XDM may contain multiple rdf:Description
-      // elements where last contains device info
-      var descElts = rdfElt.getElementsByTagNameNS(rdfNS, 'Description');
-      return descElts[descElts.length - 1] || null;
-    }
-    catch (err) {
+        , xmlDoc = parser.parseFromString(xmpXml, 'application/xml');
+      return lastDesc(firstChild(xmlDoc.documentElement));
+    } catch (err) {
       throw new Error('cannot parse XMP XML');
     }
   }
 
-  function firstChild(elt) {
-    // skip #text node if needed
-    for (elt = elt.firstChild;
-         elt && 1 !== elt.nodeType;
-         elt = elt.nextSibling) {
+  // get child rdf:Description;
+  // return parent if not found
+  function lastDesc(parent) {
+    // XDM may contain multiple rdf:Description
+    // elements where last contains useful info
+    var elts = parent && parent.childNodes || [];
+
+    for (var i = elts.length - 1; i >= 0; i--) {
+      if ('rdf:Description' === elts[i].nodeName) {
+        return elts[i];
+      }
+    }
+    return parent;
+  }
+
+  function firstChild(parent) {
+    var elt = parent && parent.firstChild;
+    for (; elt && 1 !== elt.nodeType;
+           elt = elt.nextSibling) {
+      // skip #text node if needed
     }
     return elt || null;
   }
 
   function findChild(parent, ns, name) {
-    var elts = parent.getElementsByTagNameNS(ns, name);
+    var elts = parent && parent.getElementsByTagNameNS(ns, name);
     return elts && elts[0] || null;
   }
 
   function childValue(parent, ns, name) {
-    var elt = findChild(parent, ns, name);
-    return elt ? elt.textContent : '';
+    return elemValue(findChild(parent, ns, name));
+  }
+
+  function elemValue(elt) {
+    return elt && elt.textContent || '';
   }
 
   function attrValue(elt, ns, name) {
-    return elt.getAttributeNS(ns, name) || '';
+    return elt && elt.getAttributeNS(ns, name) || '';
   }
 
   // make image.data a data URI

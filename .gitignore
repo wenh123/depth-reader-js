@@ -1,5 +1,6 @@
 bower_components/
 node_modules/
+samples
 test/*.out
 test/*.xml
 test/*.jpg
