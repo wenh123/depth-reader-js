@@ -9,7 +9,7 @@
 
   if ('object' === typeof exports) { // Node.js
     Image          = require('canvas').Image;
-    DepthReader    = require('../src/depth-reader');
+    DepthReader    = require('../depth-reader');
     chaiAsPromised = require('chai-as-promised');
     chai           = require('chai');
   } else { // browser

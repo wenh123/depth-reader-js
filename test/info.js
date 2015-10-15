@@ -3,7 +3,7 @@ show depth file info
 node test/info [url]
 */
 
-var DepthReader = require('../src/depth-reader')
+var DepthReader = require('../depth-reader')
   , Promise     = require('rsvp').Promise
   , Canvas      = require('canvas')
   , path        = require('path')
