@@ -409,11 +409,8 @@ Copyright (c)2015 Intel Corporation
       xhr.onload = function() {
         if (this.response) {
           try { // parsing is synchronous
-            self.parseFile.call(self, this.response);
-            if (self.debug) {
-              // expose for inspection
-              self.fileData = this.response;
-            }
+            self.fileData = this.response;
+            self.parseFile.call(self, self.fileData);
             resolve(self);
           } catch (err) {
             reject(err);

@@ -1,7 +1,7 @@
 {
   "name": "depth-reader",
   "description": "XDM (eXtensible Device Metadata) JPEG file reader",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "keywords": [
     "XDM",
     "LensBlur",
