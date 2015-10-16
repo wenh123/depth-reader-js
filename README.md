@@ -22,29 +22,31 @@ if run inside PhantomJS.
  - [node-xhr2](https://github.com/pwnall/node-xhr2) *(polyfill for XMLHttpRequest in Node.js)*
  - [node-canvas](https://github.com/Automattic/node-canvas) *(polyfill for HTML5 canvas in Node.js)*
 
-## Usage
+## Installation
 
-Unless previously installed, you'll need the **Cairo** graphics library.
+Unless previously installed, you'll need the `Cairo` graphics library.
 Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki/_pages)
 before continuing.
 
-If you are having trouble compiling `Cairo` or installing the `Canvas`
-module on Windows, you can, alternatively, download a snapshot of the
+If you are having trouble compiling `Cairo` or installing the `node-canvas`
+module on **Windows**, you can, alternatively, download a snapshot of the
 [node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
 folder.
 
     bower install depth-reader --save
-or
+
+*or*
+
     npm install depth-reader --save
 
-Then include or require them:
+## Usage
 
-Browser:
+*Browser:*
 
     <script src="vendor/rsvp.js"></script>
     <script src="depth-reader.js"></script>
 
-Node.js:
+*Node.js:*
 
     var DepthReader = require('./depth-reader'),
         Image       = require('canvas').Image;
@@ -77,10 +79,14 @@ Example:
 
 ## Development
 
-To contribute to the development of this package and to run the unit tests,
-you'll need to install the dev dependencies first:
+To contribute to the development of this package and to run the
+unit tests, you'll need to install the dev dependencies first:
 
     npm install
+
+Rebuild the minified release after your changes have been tested:
+
+    grunt build
 
 ## Tests
 
