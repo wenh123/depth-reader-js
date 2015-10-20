@@ -15,5 +15,12 @@
   ],
   "dependencies": {
     "rsvp": "~3.0.21"
-  }
+  },
+  "ignore": [
+    "package.json",
+    "Gruntfile.js",
+    ".*",
+    "images/*",
+    "test/*"
+  ]
 }

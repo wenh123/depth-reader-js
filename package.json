@@ -9,11 +9,17 @@
     "RealSense"
   ],
   "homepage": "https://github.com/DavisReef/depth-reader-js",
+  "bugs": {
+    "url": "https://github.com/DavisReef/depth-reader-js/issues"
+  },
   "private": false,
   "license": "MIT",
   "author": {
     "name": "Erhhung Yuan",
     "email": "erhhung.yuan@intel.com"
+  },
+  "engines": {
+    "node": ">=0.10.0"
   },
   "main": "depth-reader.js",
   "dependencies": {
@@ -42,7 +48,6 @@
     "time-grunt": "^1.2.1"
   },
   "scripts": {
-    "postinstall": "bower install",
     "start": "grunt",
     "test": "grunt test"
   }
