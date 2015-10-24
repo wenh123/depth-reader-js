@@ -53,43 +53,67 @@ folder.
 
 Example:
 
-    var fileUrl = 'http://localhost/images/depth.jpg';
-    new DepthReader().loadFile(fileUrl)
-        .then(function(reader)
-        {
-            var containerImage = new Image(),
-                referenceImage = new Image(),
-                 depthmapImage = new Image(),
-               confidenceImage = new Image();
+    var fileURL = 'http://localhost/images/depth.jpg'
+        reader  = new DepthReader();
 
-            // the container image (depth.jpg)
-            // may contain user applied edits
-            containerImage.src = reader.fileData;
+    reader.loadFile(fileURL)
+        .then(function(reader) {
+            return loadImage(reader.fileData);
+        })
+        .then(function(img) {
+            // container image may contain user-applied effects
+            showDimensions(img, 'Container');
 
-            referenceImage.src = reader.image.data;
-            console.log('Reference image dimensions:',
-                referenceImage.width + 'x' +
-                referenceImage.height);
+            return loadImage(reader.image.data);
+        })
+        .then(function(img) {
+            // reference image is the pre-edited camera image,
+            // but may be cropped to rid objectionable content
+            showDimensions(img, 'Reference');
 
-            if (reader.isXDM) {
-                // normalize depth values between 1-255
-                // and shift them by 64 to boost effect
-                reader.normalizeDepthmap(64);
-            }
-            depthmapImage.src = reader.depth.data;
-            console.log('Depthmap  image dimensions:',
-                depthmapImage.width + 'x' +
-                depthmapImage.height);
+            // normalize depth values between 1-255
+            // and shift them by 64 to boost effect
+            return reader.normalizeDepthMap(64);
+        })
+        .then(function(data) { // depth.data
+            return loadImage(data);
+        })
+        .then(function(img) {
+            showDimensions(img, 'Depth Map');
 
-            if (reader.confidence.data) {
-                // confidence map may not be available,
-                // but should be same size as depthmap
-                confidenceImage.src = reader.confidence.data;
+            // confidence map may be missing
+            var data = reader.confidence.data;
+            return data && loadImage(data);
+        })
+        .then(function(img) {
+            if (img) {
+                // confidence map must be the
+                // same size as the depth map
+                showDimensions(img, 'Confidence');
             }
         })
-        .catch(function(error) {
-            console.error('loading failed:', error);
+        .catch(function(err) {
+            console.error('loading failed:', err);
         });
+
+    function loadImage(src) {
+        return new Promise(function(resolve, reject) {
+            try {
+                var img = new Image();
+                img.onload = function() {
+                    resolve(img);
+                };
+                img.src = src;
+            } catch (err) {
+                reject(err);
+            }
+        });
+    }
+
+    function showDimensions(img, type) {
+        console.log(type, 'image dimensions:',
+            img.width + 'x' + img.height);
+    }
 
 ## Development
 
