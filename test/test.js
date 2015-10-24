@@ -3,17 +3,21 @@
 
   var root = this // _window_ if in browser
     , Image
+    , Promise
     , DepthReader
     , chaiAsPromised
     , chai;
 
   if ('object' === typeof exports) { // Node.js
     Image          = require('canvas').Image;
+    Promise        = require('rsvp').Promise;
     DepthReader    = require('../depth-reader');
     chaiAsPromised = require('chai-as-promised');
     chai           = require('chai');
   } else { // browser
     Image          = root.Image;
+    Promise        = root.Promise ||
+                     root.RSVP.Promise;
     DepthReader    = root.DepthReader;
     chaiAsPromised = root.chaiAsPromised;
     chai           = root.chai;
@@ -21,14 +25,30 @@
   var should = chai.should();
   chai.use(chaiAsPromised);
 
+  function loadImage(src, img) {
+    return new Promise(function(resolve, reject) {
+      try {
+        if (!img) {
+          img = new Image;
+        }
+        img.onload = function() {
+          resolve(img);
+        };
+        img.src = src;
+      } catch (err) {
+        reject(err);
+      }
+    });
+  }
+
   describe('DepthReader Class', function() {
-    var baseUrl = 'http://localhost:9000/images/';
+    var baseUrl = 'http://localhost:9000/images/'
+      , image;
 
     // xdm-photo1.jpg: metadata encoded as XML attributes
     context('"xdm-photo1.jpg" (XDM v1.0)', function() {
       var jpegUrl = baseUrl + 'xdm-photo1.jpg'
-        , reader  = new DepthReader
-        , image   = new Image;
+        , reader  = new DepthReader;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -99,10 +119,12 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image at 2966x2253', function() {
-        image.src = reader.image.data;
-        image.width.should.equal(2966);
-        image.height.should.equal(2253);
+      it('should have reference image of 2966x2253', function() {
+        return loadImage(reader.image.data)
+          .then(function(img) {
+            img.width.should.equal(2966);
+            img.height.should.equal(2253);
+          });
       });
 
       it('should have set depth.metric to false', function() {
@@ -130,11 +152,16 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image at 472x352', function() {
-        reader.normalizeDepthmap();
-        image.src = reader.depth.data;
-        image.width.should.equal(472);
-        image.height.should.equal(352);
+      it('should have depthmap image of 472x352', function() {
+        return reader.normalizeDepthMap()
+          .then(function(data) {
+            return loadImage(data);
+          })
+          .then(function(img) {
+            image = img;
+            img.width.should.equal(472);
+            img.height.should.equal(352);
+          });
       });
 
       it('should have set confidence.mime to "image/png"', function() {
@@ -149,17 +176,18 @@
       it('should have confidence same W & H as depthmap', function() {
         var w = image.width
           , h = image.height;
-        image.src = reader.confidence.data;
-        image.width.should.equal(w);
-        image.height.should.equal(h);
+        return loadImage(reader.confidence.data)
+          .then(function(img) {
+            img.width.should.equal(w);
+            img.height.should.equal(h);
+          });
       });
     });
 
     // xdm-photo2.jpg: metadata encoded as XML elements
     context('"xdm-photo2.jpg" (XDM v1.0)', function() {
       var jpegUrl = baseUrl + 'xdm-photo2.jpg'
-        , reader  = new DepthReader
-        , image   = new Image;
+        , reader  = new DepthReader;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -218,10 +246,12 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image at 2965x2254', function() {
-        image.src = reader.image.data;
-        image.width.should.equal(2965);
-        image.height.should.equal(2254);
+      it('should have reference image of 2965x2254', function() {
+        return loadImage(reader.image.data)
+          .then(function(img) {
+            img.width.should.equal(2965);
+            img.height.should.equal(2254);
+          });
       });
 
       it('should have set depth.metric to false', function() {
@@ -249,11 +279,16 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image at 472x352', function() {
-        reader.normalizeDepthmap();
-        image.src = reader.depth.data;
-        image.width.should.equal(472);
-        image.height.should.equal(352);
+      it('should have depthmap image of 472x352', function() {
+        return reader.normalizeDepthMap()
+          .then(function(data) {
+            return loadImage(data);
+          })
+          .then(function(img) {
+            image = img;
+            img.width.should.equal(472);
+            img.height.should.equal(352);
+          });
       });
 
       it('should have set confidence.mime to "image/png"', function() {
@@ -268,16 +303,17 @@
       it('should have confidence same W & H as depthmap', function() {
         var w = image.width
           , h = image.height;
-        image.src = reader.confidence.data;
-        image.width.should.equal(w);
-        image.height.should.equal(h);
+        return loadImage(reader.confidence.data)
+          .then(function(img) {
+            img.width.should.equal(w);
+            img.height.should.equal(h);
+          });
       });
     });
 
     context('"lbr-photo1.jpg" (Lens Blur)', function() {
       var jpegUrl = baseUrl + 'lbr-photo1.jpg'
-        , reader  = new DepthReader
-        , image   = new Image;
+        , reader  = new DepthReader;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -296,10 +332,12 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image at 576x1024', function() {
-        image.src = reader.image.data;
-        image.width.should.equal(576);
-        image.height.should.equal(1024);
+      it('should have reference image of 576x1024', function() {
+        return loadImage(reader.image.data)
+          .then(function(img) {
+            img.width.should.equal(576);
+            img.height.should.equal(1024);
+          });
       });
 
       it('should have set depth.metric to false', function() {
@@ -327,10 +365,12 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image at 576x1024', function() {
-        image.src = reader.depth.data;
-        image.width.should.equal(576);
-        image.height.should.equal(1024);
+      it('should have depthmap image of 576x1024', function() {
+        return loadImage(reader.depth.data)
+          .then(function(img) {
+            img.width.should.equal(576);
+            img.height.should.equal(1024);
+          });
       });
 
       it('should have set focal point to (0.5,0.5)', function() {
