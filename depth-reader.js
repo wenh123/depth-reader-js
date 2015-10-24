@@ -424,10 +424,12 @@ Copyright (c)2015 Intel Corporation
     return !!String(str).match(/^\s*1|true|yes\s*$/i);
   }
 
-  // wraps onload with promise
-  function loadImage(img, src) {
+  function loadImage(src, img) {
     return new Promise(function(resolve, reject) {
       try {
+        if (!img) {
+          img = new Image;
+        }
         img.onload = function() {
           resolve(img);
         };
@@ -494,13 +496,13 @@ Copyright (c)2015 Intel Corporation
          depth._normalized) {
       return Promise.resolve(depth.data);
     }
-    return loadImage(new Image, depth.data)
-      .then(function(image) {
-        var w      = image.width
-          , h      = image.height
+    return loadImage(depth.data)
+      .then(function(img) {
+        var w      = img.width
+          , h      = img.height
           , canvas = newCanvas(w, h)
           , ctx    = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0);
+        ctx.drawImage(img, 0, 0);
 
         var pixels = ctx.getImageData(0, 0, w, h)
           , data   = pixels.data
