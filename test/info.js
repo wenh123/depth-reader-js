@@ -59,9 +59,15 @@ reader.loadFile(fileUrl)
     canvas = makeCanvas(reader.depth.data);
     if (reader.isXDM) {
       // save normalized depthmap
-      reader.normalizeDepthmap(64);
+      return reader.normalizeDepthMap(64)
+        .then(function(data) {
+          canvas_ = makeCanvas(data);
+        });
+    } else {
+      canvas_ = canvas;
     }
-    canvas_ = reader.isXDM ? makeCanvas(reader.depth.data) : canvas;
+  })
+  .then(function() {
     sizes.depthmap = {
       width:  canvas_.width
     , height: canvas_.height
