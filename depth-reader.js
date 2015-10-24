@@ -522,7 +522,7 @@ Copyright (c)2015 Intel Corporation
         for (i = 0; i < len; i += 4) {
           val = data[i];
           if (prev !== val) {
-            norm = Math.round((val - min) / spread * 255 + bias|0);
+            norm = Math.round((val - min) / spread * 255 + (bias|0));
             norm = Math.max(0, Math.min(255, norm));
             prev = val;
           }
