@@ -53,7 +53,7 @@ folder.
 
 *Example:*
 
-    var fileURL = 'http://localhost/images/depth.jpg'
+    var fileURL = 'http://localhost/images/depth.jpg',
         reader  = new DepthReader();
 
     reader.loadFile(fileURL)
