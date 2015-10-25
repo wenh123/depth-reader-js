@@ -24,20 +24,20 @@ if run inside PhantomJS.
 
 ## Installation
 
-Unless previously installed, you'll need the `Cairo` graphics library.
-Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki/_pages)
-before continuing.
-
-If you are having trouble compiling `Cairo` or installing the `node-canvas`
-module on **Windows**, you can, alternatively, download a snapshot of the
-[node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
-folder.
-
     bower install depth-reader --save
 
 *or*
 
     npm install depth-reader --save
+
+For Node.js, unless previously installed, you'll need the `Cairo` graphics library.
+Follow these [installation instructions](https://github.com/LearnBoost/node-canvas/wiki/_pages)
+before continuing.
+
+If you're having trouble compiling `Cairo` or installing the `node-canvas`
+module on **Windows**, you can, alternatively, download a snapshot of the
+[node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
+folder.
 
 ## Usage
 
@@ -51,7 +51,7 @@ folder.
     var DepthReader = require('depth-reader'),
         Image       = require('canvas').Image;
 
-Example:
+*Example:*
 
     var fileURL = 'http://localhost/images/depth.jpg'
         reader  = new DepthReader();
@@ -115,10 +115,79 @@ Example:
             img.width + 'x' + img.height);
     }
 
+## API Reference
+
+Class **DepthReader** *(constructor takes no arguments)*
+
+*Properties (read-only):*
+
+- **isXDM** *boolean* - XDM or Lens Blur format
+- **revision** *float* - XDM revision number
+- **device** *object*
+  - **vendor** *object*
+    - **manufacturer** *string*
+    - **model** *string*
+  - **pose** *object* - world coordinates in degrees
+    - **latitude** *float*
+    - **longitude** *float*
+    - **altitude** *float*
+- **camera** *object*
+  - **vendor** *object*
+    - **manufacturer** *string*
+    - **model** *string*
+  - **pose** *object*
+    - **positionX** *float*
+    - **positionY** *float*
+    - **positionZ** *float*
+    - **rotationAxisX** *float*
+    - **rotationAxisY** *float*
+    - **rotationAxisZ** *float*
+    - **rotationAngle** *float*
+- **perspective** *object* *(XDM only)*
+  - **focalLengthX** *float*
+  - **focalLengthY** *float*
+  - **principalPointX** *float*
+  - **principalPointY** *float*
+- **focus** *object* *(Lens Blur only)*
+  - **focalPointX** *float*
+  - **focalPointY** *float*
+  - **focalDistance** *float*
+  - **blurAtInfinity** *float*
+- **fileData** *ArrayBuffer*/*Buffer* - container JPEG file loaded by loadFile()
+- **image** *object* - reference image
+  - **mime** *string* - image/jpeg or image/png
+  - **data** *string* - data URI
+- **depth** *object* - depth map image
+  - **metric** *boolean* - if true, near/far values are in meters
+  - **format** *string* - RangeInverse or RangeLinear (see specs)
+  - **near** *float*
+  - **far** *float*
+  - **mime** *string* - generally image/png
+  - **data** *string* - data URI
+- **confidence** *object* - confidence map image
+  - **mime** *string* - generally image/png
+  - **data** *string* - data URI
+
+*Properties (advanced):*
+
+- **debug** *boolean* - if set to true before calling loadFile() or parseFile(), exposes properties xmpXapXml and xmpExtXml for inspection
+- **xmpXapXml** *string* - XMP segment with header http://ns.adobe.com/xap/1.0/
+- **xmpExtXml** *string* - XMP segment with header http://ns.adobe.com/xmp/extension/
+
+*Methods:*
+
+- **loadFile(***fileUrl***)** - load XDM or Lens Blur image given JPEG file URL (parseFile() will be invoked automatically)
+  - *return:* Promise that will be resolved with this DepthReader instance
+- **parseFile(***buffer***)** - parse XDM or Lens Blur JPEG image given its ArrayBuffer (browser) or Buffer (Node.js) (function is synchronous and returns nothing; exception will be thrown if parsing fails)
+- **normalizeDepthMap(***bias***)** - normalize XDM depth map so that depth values are distributed between 1 and 255 (overwrites the original depth.data; does nothing if JPEG is not XDM or depth.data is null)
+  - **bias** *signed int* - shift depth values (brightness) after distribution (values will be clamped between 1 and 255)
+  - *return:* Promise that will be resolved with modified depth.data
+
 ## Development
 
-To contribute to the development of this package and to run the
-unit tests, you'll need to install the dev dependencies first:
+To contribute to the development of this library and to run its unit tests,
+you'll first need to fork this Github project and clone it into your local
+environment, and then install the dev dependencies:
 
     npm install
 
@@ -136,7 +205,7 @@ Run Node.js tests in the console and browser tests in a web page:
 
     npm start
 
-Print depthmap information (run HTTP server in separate console):
+Print depth map information (run HTTP server in separate console):
 
     grunt serve
     node test/info

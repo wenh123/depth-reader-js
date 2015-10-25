@@ -95,7 +95,7 @@ Copyright (c)2015 Intel Corporation
   /*
   parse XDM/LensBlur JPEG given its ArrayBuffer
   (function is synchronous and returns nothing;
-  exception will be raised if parsing fails)
+  exception will be thrown if parsing fails)
   */
   DepthReader.prototype.parseFile = function(buffer) {
     var bytes = new Uint8Array(buffer);
@@ -453,7 +453,8 @@ Copyright (c)2015 Intel Corporation
   /*
   load XDM/LensBlur image given JPEG file URL
   (parseFile() will be invoked automatically)
-  return: Promise to be fulfilled with _this_
+  return: Promise that will be resolved with
+  _this_
   */
   DepthReader.prototype.loadFile = function(fileUrl) {
     var self = this;
@@ -482,12 +483,12 @@ Copyright (c)2015 Intel Corporation
   };
 
   /*
-  normalize XDM depthmap so that depth
-  values are scaled between 1 and 255
+  normalize the XDM depthmap so that depth
+  values are distributed between 1 and 255
   (overwrites the original depth.data)
   bias: shift depth values (brightness)
-  return: Promise to be fulfilled with
-  modified depth.data
+  return: Promise that will be resolved
+  with modified depth.data
   */
   DepthReader.prototype.normalizeDepthMap = function(bias) {
     var depth = this.depth;
@@ -523,7 +524,7 @@ Copyright (c)2015 Intel Corporation
           val = data[i];
           if (prev !== val) {
             norm = Math.round((val - min) / spread * 255 + (bias|0));
-            norm = Math.max(0, Math.min(255, norm));
+            norm = Math.max(1, Math.min(255, norm));
             prev = val;
           }
           // modify R,G,B not alpha
