@@ -192,8 +192,9 @@ To contribute to the development of this library and to run its unit tests,
 you'll first need to fork this Github project and clone it into your local
 environment, and then install the dev dependencies:
 
-    npm install
     bower install
+    npm install -g grunt-cli node-gyp
+    npm install
 
 Rebuild the minified release after your changes have been tested:
 
@@ -203,7 +204,7 @@ Rebuild the minified release after your changes have been tested:
 
 Install global dependencies:
 
-    npm install -g grunt mocha
+    npm install -g grunt-cli mocha
 
 Run Node.js tests in the console and browser tests in a web page:
 
