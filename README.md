@@ -36,8 +36,8 @@ before continuing.
 
 If you're having trouble compiling `Cairo` or installing the `node-canvas`
 module on **Windows**, you can, alternatively, download a snapshot of the
-[node_modules](http://storage.realsense.photo/projects/depth-reader-js/node_modules_windows.zip)
-folder.
+[node_modules\canvas](http://storage.realsense.photo/projects/depth-reader-js/node-canvas-1.3.1-node-5.0-win32.zip)
+folder built for Node.js v5.0.
 
 ## Usage
 
@@ -102,6 +102,9 @@ folder.
                 var img = new Image();
                 img.onload = function() {
                     resolve(img);
+                };
+                img.onerror = function() {
+                    reject(new Error('cannot load image'));
                 };
                 img.src = src;
             } catch (err) {
@@ -190,6 +193,7 @@ you'll first need to fork this Github project and clone it into your local
 environment, and then install the dev dependencies:
 
     npm install
+    bower install
 
 Rebuild the minified release after your changes have been tested:
 
@@ -212,7 +216,7 @@ Print depth map information (run HTTP server in separate console):
 
 ## Authors
 
-  - Erhhung Yuan <erhhung.yuan@intel.com>
+- Erhhung Yuan <erhhung.yuan@intel.com>
 
 ## License
 

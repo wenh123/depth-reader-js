@@ -34,6 +34,9 @@
         img.onload = function() {
           resolve(img);
         };
+        img.onerror = function() {
+          reject(new Error('cannot load image'));
+        };
         img.src = src;
       } catch (err) {
         reject(err);

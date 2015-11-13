@@ -12,7 +12,6 @@ var DepthReader = require('../depth-reader')
 var fileUrl = process.argv[2] ||
       'http://localhost:9000/images/xdm-photo1.jpg'
   , pathname
-  , canvas_
   , canvas
   , sizes = {};
 
@@ -36,55 +35,62 @@ reader.loadFile(fileUrl)
   })
   .then(function() {
     console.log('  writing: container.jpg');
-    canvas_ = makeCanvas(reader.fileData);
-    sizes.container = {
-      width:  canvas_.width
-    , height: canvas_.height
-    };
-    pathname = path.join(__dirname, 'container.jpg');
-    return saveCanvas(canvas_, pathname);
+    return makeCanvas(reader.fileData)
+      .then(function(canvas) {
+        sizes.container = {
+          width:  canvas.width
+        , height: canvas.height
+        };
+        pathname = path.join(__dirname, 'container.jpg');
+        return saveCanvas(canvas, pathname);
+      });
   })
   .then(function() {
     console.log('  writing: reference.jpg');
-    canvas_ = makeCanvas(reader.image.data);
-    sizes.reference = {
-      width:  canvas_.width
-    , height: canvas_.height
-    };
-    pathname = path.join(__dirname, 'reference.jpg');
-    return saveCanvas(canvas_, pathname);
+    return makeCanvas(reader.image.data)
+      .then(function(canvas) {
+        sizes.reference = {
+          width:  canvas.width
+        , height: canvas.height
+        };
+        pathname = path.join(__dirname, 'reference.jpg');
+        return saveCanvas(canvas, pathname);
+      });
   })
   .then(function() {
     console.log('  writing: depthmap.png');
-    canvas = makeCanvas(reader.depth.data);
-    if (reader.isXDM) {
-      // save normalized depthmap
-      return reader.normalizeDepthMap(64)
-        .then(function(data) {
-          canvas_ = makeCanvas(data);
-        });
-    } else {
-      canvas_ = canvas;
-    }
-  })
-  .then(function() {
-    sizes.depthmap = {
-      width:  canvas_.width
-    , height: canvas_.height
-    };
-    pathname = path.join(__dirname, 'depthmap.png');
-    return saveCanvas(canvas_, pathname);
+    return makeCanvas(reader.depth.data)
+      .then(function(canvas_) {
+        // show histogram of original depthmap
+        canvas = canvas_;
+        if (!reader.isXDM) {
+          return canvas_;
+        }
+        // save normalized depthmap
+        return reader.normalizeDepthMap(64)
+          .then(makeCanvas);
+      })
+      .then(function(canvas) {
+        sizes.depthmap = {
+          width:  canvas.width
+        , height: canvas.height
+        };
+        pathname = path.join(__dirname, 'depthmap.png');
+        return saveCanvas(canvas, pathname);
+      });
   })
   .then(function() {
     if (reader.confidence.data) {
       console.log('  writing: confidence.png');
-      canvas_ = makeCanvas(reader.confidence.data);
-      sizes.confidence = {
-        width:  canvas_.width
-      , height: canvas_.height
-      };
-      pathname = path.join(__dirname, 'confidence.png');
-      return saveCanvas(canvas_, pathname);
+      return makeCanvas(reader.confidence.data)
+        .then(function(canvas) {
+          sizes.confidence = {
+            width:  canvas.width
+          , height: canvas.height
+          };
+          pathname = path.join(__dirname, 'confidence.png');
+          return saveCanvas(canvas, pathname);
+        });
     }
   })
   .then(function() {
@@ -144,6 +150,25 @@ function saveString(string, pathname)
   });
 }
 
+function loadImage(src, img) {
+  return new Promise(function(resolve, reject) {
+    try {
+      if (!img) {
+        img = new Canvas.Image;
+      }
+      img.onload = function() {
+        resolve(img);
+      };
+      img.onerror = function() {
+        reject(new Error('cannot load image'));
+      };
+      img.src = src;
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
 /**
 draw image onto new canvas
 @imgSrc: Canvas.Image.src
@@ -151,17 +176,16 @@ return: Canvas
 */
 function makeCanvas(imgSrc)
 {
-  var image = new Canvas.Image;
-  image.src = imgSrc;
-  var w = image.width
-    , h = image.height;
-  if (!w || !h) {
-    return null;
-  }
-  var canvas = new Canvas(w, h)
-    , ctx    = canvas.getContext('2d');
-  ctx.drawImage(image, 0, 0);
-  return canvas;
+  return loadImage(imgSrc)
+    .then(function(img) {
+      if (!img.width) {
+        return null;
+      }
+      var canvas = new Canvas(img.width, img.height)
+        , ctx    = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return canvas;
+    });
 }
 
 /**
