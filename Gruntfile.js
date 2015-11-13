@@ -28,7 +28,7 @@ module.exports = function(grunt) {
         }
       },
       test: {
-        files: ['test/*.js'],
+        files: ['test/test.js'],
         tasks: ['newer:jshint:test', 'mochacli']
       },
       gruntfile: {
@@ -76,7 +76,7 @@ module.exports = function(grunt) {
         reporter: 'spec',
         timeout: 5000
       },
-      all: ['test/*.js']
+      all: ['test/test.js']
     },
 
     // Mocha for browser testing
