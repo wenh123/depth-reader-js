@@ -511,24 +511,41 @@ Copyright (c)2015 Intel Corporation
         var pixels = ctx.getImageData(0, 0, w, h)
           , data   = pixels.data
           , len    = data.length
+          , total  = len / 4
+          , hist   = new Array(256)
           , min    = 255
           , max    = 0
-          , val, norm, prev, i, j;
+          , val,  pcnt
+          , norm, prev
+          , i, j;
 
         // get min/max depth values
+        for (i = 0; i < 256; hist[i++] = 0) {}
         for (i = 0; i < len; i += 4) {
-          val = data[i];
+          ++hist[val = data[i]];
+
           if (val > max) {max = val;}
           if (val < min) {min = val;}
         }
-        // --min so all values > 0
-        var spread = max - (--min);
+        // discard min/max outliers
+        for (i = min; i < max; i++) {
+          pcnt = hist[i] / total * 100;
+          if (depthThresh <= pcnt) {break;}
+        }
+        for (j = max; j > min; j--) {
+          pcnt = hist[j] / total * 100;
+          if (depthThresh <= pcnt) {break;}
+        }
+        if (0 < j - i) {
+          min = i; max = j;
+        }
+        var spread = 255 / (max - min + 1);
         for (i = 0; i < len; i += 4) {
-          val = data[i];
-          if (prev !== val) {
-            norm = Math.round((val - min) / spread * 255 + (bias|0));
-            norm = Math.max(1, Math.min(255, norm));
+          if (prev !== (val = data[i])) {
             prev = val;
+            val  = Math.max(0, Math.min(val, max) - min);
+            norm = Math.round(val * spread + (bias|0));
+            norm = Math.max(1, Math.min(255, norm));
           }
           // modify R,G,B not alpha
           for (j = 0; j < 3; j++) {
@@ -541,6 +558,9 @@ Copyright (c)2015 Intel Corporation
         return depth.data;
       });
   };
+  // min percent of total depthmap pixels
+  // for determining min/max depth values
+  var depthThresh = 0.1;
 
   if ('object' === typeof exports) {
     module.exports   = DepthReader;

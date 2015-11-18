@@ -13,6 +13,7 @@ var fileUrl = process.argv[2] ||
       'http://localhost:9000/images/xdm-photo1.jpg'
   , pathname
   , canvas
+  , canvas_
   , sizes = {};
 
 var reader = new DepthReader;
@@ -61,7 +62,7 @@ reader.loadFile(fileUrl)
     console.log('  writing: depthmap.png');
     return makeCanvas(reader.depth.data)
       .then(function(canvas_) {
-        // show histogram of original depthmap
+        // show histogram of original depthmap first
         canvas = canvas_;
         if (!reader.isXDM) {
           return canvas_;
@@ -71,6 +72,8 @@ reader.loadFile(fileUrl)
           .then(makeCanvas);
       })
       .then(function(canvas) {
+        // then show histogram of normalized depthmap
+        canvas_ = canvas;
         sizes.depthmap = {
           width:  canvas.width
         , height: canvas.height
@@ -94,12 +97,6 @@ reader.loadFile(fileUrl)
     }
   })
   .then(function() {
-    var range  = getBrightness(canvas, true)
-      , histo  = getHistogram (canvas, 'r')
-      , maxVal = histo.max.r
-      , total  = canvas.width
-               * canvas.height;
-
     console.log('   is XDM:', reader.isXDM);
     console.log(' revision:', reader.revision.toFixed(1));
     console.log('reference: %dx%d', sizes.reference.width
@@ -110,19 +107,35 @@ reader.loadFile(fileUrl)
     console.log('   format:', reader.depth.format);
     console.log('     near:', reader.depth.near);
     console.log('      far:', reader.depth.far);
-    console.log('min value:', range.min);
-    console.log('max value:', range.max);
-    console.log('histogram:');
 
-    for (var i = range.min; i <= range.max; i++) {
-      var value = histo.freq.r[i]
-        , isMax = value === maxVal
-        , prcnt = value / total * 100;
+    var total = canvas.width
+              * canvas.height;
 
-      console.log(  padZero(i,  3) + ':'
-        , pad(prcnt.toFixed(1), 4) + '%'
-        , value + (isMax ? ' *' : ''));
-    }
+    [canvas, canvas_].forEach(function(canvas, i) {
+      var range  = getBrightness(canvas, true)
+        , histo  = getHistogram (canvas, 'r')
+        , maxVal = histo.max.r
+        , max    = range.max
+        , min    = range.min;
+
+      if (0 === i) { // original depthmap
+        console.log('min value:', min);
+        console.log('max value:', max);
+      }
+      console.log('histogram:');
+
+      for (i = min; i <= max; i++) {
+        var value = histo.freq.r[i];
+        if (value) {
+          var isMax = value === maxVal
+            , pcnt  = value / total * 100;
+
+          console.log( padZero(i,  3) + ':'
+            , pad(pcnt.toFixed(2), 5) + '%'
+            , value + (isMax ? ' *' : ''));
+        }
+      }
+    });
   })
   .catch(function(error) {
     console.error('loading failed:', error);
