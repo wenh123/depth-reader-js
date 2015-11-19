@@ -83,6 +83,20 @@ reader.loadFile(fileUrl)
       });
   })
   .then(function() {
+    if (reader.depth.raw.data) {
+      console.log('  writing: rawdepth.png');
+      return makeCanvas(reader.depth.raw.data)
+        .then(function(canvas) {
+          sizes.rawdepth = {
+            width:  canvas.width
+          , height: canvas.height
+          };
+          pathname = path.join(__dirname, 'rawdepth.png');
+          return saveCanvas(canvas, pathname);
+        });
+    }
+  })
+  .then(function() {
     if (reader.confidence.data) {
       console.log('  writing: confidence.png');
       return makeCanvas(reader.confidence.data)
@@ -122,7 +136,8 @@ reader.loadFile(fileUrl)
         console.log('min value:', min);
         console.log('max value:', max);
       }
-      console.log('histogram:');
+      console.log('histogram (%s):'
+        , !i ? 'original' : 'normalized');
 
       for (i = min; i <= max; i++) {
         var value = histo.freq.r[i];
@@ -294,12 +309,10 @@ function getHistogram(object, channel)
   {
     if (-1 === chan ||
          i === chan) {
-      var a = new Array(256)
+      var a = new Int32Array(256)
         , j, m, n, val;
 
-      for (j = 0; j < 256; a[j++] = 0) {}
-      for (m = 0, j = i; j < len; j += 4)
-      {
+      for (m = 0, j = i; j < len; j += 4) {
         val = data[j];
         if (m < (n = ++a[val])) {
           m = n;

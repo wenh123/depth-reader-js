@@ -160,22 +160,26 @@ Class **DepthReader** *(constructor takes no arguments)*
 - **image** *object* - reference image
   - **mime** *string* - image/jpeg or image/png
   - **data** *string* - data URI
-- **depth** *object* - depth map image
+- **depth** *object* - enhanced (and normalized) depth map image
   - **metric** *boolean* - if true, near/far values are in meters
   - **format** *string* - RangeInverse or RangeLinear (see specs)
   - **near** *float*
   - **far** *float*
   - **mime** *string* - generally image/png
   - **data** *string* - data URI
-- **confidence** *object* - confidence map image
+- **confidence** *object* - confidence map image (if available)
   - **mime** *string* - generally image/png
-  - **data** *string* - data URI
+  - **data** *string* - data URI (null if not available)
 
 *Properties (advanced):*
 
-- **debug** *boolean* - if set to true before calling loadFile() or parseFile(), exposes properties xmpXapXml and xmpExtXml for inspection
+- **debug=** *boolean* - if set to true before calling loadFile() or parseFile(), exposes properties xmpXapXml and xmpExtXml for inspection
 - **xmpXapXml** *string* - XMP segment with header http://ns.adobe.com/xap/1.0/
 - **xmpExtXml** *string* - XMP segment with header http://ns.adobe.com/xmp/extension/
+- **depth** *object* - enhanced depth map image
+  - **raw** *object* - raw depth map image (if available)
+    - **mime** *string* - generally image/png
+    - **data** *string* - data URI (null if not available)
 
 *Methods:*
 

@@ -85,6 +85,10 @@ Copyright (c)2015 Intel Corporation
     , far:    0
     , mime:   ''
     , data:   null // data URI
+    , raw: {
+        mime: ''
+      , data: null // data URI
+      }
     };
     this.confidence = {
       mime: ''
@@ -146,9 +150,11 @@ Copyright (c)2015 Intel Corporation
     (this.isXDM ? parseXDM : parseLensBlur).call(
       null, this, imageNS, xapDescElt, extDescElt);
 
-    makeDataURI(this.image);
-    makeDataURI(this.depth);
-    makeDataURI(this.confidence);
+    [ this.image
+    , this.depth
+    , this.depth.raw
+    , this.confidence
+    ].forEach(makeDataURI);
   };
 
   function parseXDM(self, imageNS, xapDescElt, extDescElt) {
@@ -178,9 +184,10 @@ Copyright (c)2015 Intel Corporation
       , imagingElt = lastDesc(
                      findChild(extDescElt, cameraNS, 'ImagingModel'))
       ,   imageElt = findChild(extDescElt, cameraNS, 'Image')
-      ,   depthElt = lastDesc(
-                     findChild(extDescElt, cameraNS, 'DepthMap'))
-      ,  confidElt = findChild(  depthElt,  noiseNS, 'Reliability');
+      ,  enhDepElt = lastDesc(
+                     findChild(extDescElt, cameraNS, 'DepthMap', 0))
+      ,  rawDepElt = findChild(extDescElt, cameraNS, 'DepthMap', 1)
+      ,  confidElt = findChild( enhDepElt,  noiseNS, 'Reliability');
 
     self.revision = +attrValue(extDescElt, deviceNS, 'Revision') ||
                    +childValue( xdmRevElt, deviceNS, 'Revision') ||
@@ -228,25 +235,29 @@ Copyright (c)2015 Intel Corporation
                                       +childValue(imagingElt, perspectNS, 'PrincipalPointY');
 
     self.depth.metric = parseBool(
-                         attrValue(depthElt, depthNS, 'Metric') ||
-                        childValue(depthElt, depthNS, 'Metric'));
-    self.depth.format =  attrValue(depthElt, depthNS, 'Format') ||
-                        childValue(depthElt, depthNS, 'Format');
-    self.depth.near   = +attrValue(depthElt, depthNS, 'Near') ||
-                       +childValue(depthElt, depthNS, 'Near');
-    self.depth.far    = +attrValue(depthElt, depthNS, 'Far') ||
-                       +childValue(depthElt, depthNS, 'Far');
+                         attrValue(enhDepElt, depthNS, 'Metric') ||
+                        childValue(enhDepElt, depthNS, 'Metric'));
+    self.depth.format =  attrValue(enhDepElt, depthNS, 'Format') ||
+                        childValue(enhDepElt, depthNS, 'Format');
+    self.depth.near   = +attrValue(enhDepElt, depthNS, 'Near') ||
+                       +childValue(enhDepElt, depthNS, 'Near');
+    self.depth.far    = +attrValue(enhDepElt, depthNS, 'Far') ||
+                       +childValue(enhDepElt, depthNS, 'Far');
 
     self.image.mime      = attrValue( imageElt, imageNS, 'Mime') ||
                           childValue( imageElt, imageNS, 'Mime');
-    self.depth.mime      = attrValue( depthElt, depthNS, 'Mime') ||
-                          childValue( depthElt, depthNS, 'Mime');
+    self.depth.mime      = attrValue(enhDepElt, depthNS, 'Mime') ||
+                          childValue(enhDepElt, depthNS, 'Mime');
+    self.depth.raw.mime  = attrValue(rawDepElt, depthNS, 'Mime') ||
+                          childValue(rawDepElt, depthNS, 'Mime');
     self.confidence.mime = attrValue(confidElt, imageNS, 'Mime') ||
                           childValue(confidElt, imageNS, 'Mime');
     self.image.data      = attrValue( imageElt, imageNS, 'Data') ||
                           childValue( imageElt, imageNS, 'Data');
-    self.depth.data      = attrValue( depthElt, depthNS, 'Data') ||
-                          childValue( depthElt, depthNS, 'Data');
+    self.depth.data      = attrValue(enhDepElt, depthNS, 'Data') ||
+                          childValue(enhDepElt, depthNS, 'Data');
+    self.depth.raw.data  = attrValue(rawDepElt, depthNS, 'Data') ||
+                          childValue(rawDepElt, depthNS, 'Data');
     self.confidence.data = attrValue(confidElt, imageNS, 'Data') ||
                           childValue(confidElt, imageNS, 'Data');
   }
@@ -310,9 +321,9 @@ Copyright (c)2015 Intel Corporation
     return elt || null;
   }
 
-  function findChild(parent, ns, name) {
+  function findChild(parent, ns, name, index) {
     var elts = parent && parent.getElementsByTagNameNS(ns, name);
-    return elts && elts[0] || null;
+    return elts && elts[index|0] || null;
   }
 
   function childValue(parent, ns, name) {
@@ -512,7 +523,7 @@ Copyright (c)2015 Intel Corporation
           , data   = pixels.data
           , len    = data.length
           , total  = len / 4
-          , hist   = new Array(256)
+          , hist   = new Int32Array(256)
           , min    = 255
           , max    = 0
           , val,  pcnt
@@ -520,10 +531,8 @@ Copyright (c)2015 Intel Corporation
           , i, j;
 
         // get min/max depth values
-        for (i = 0; i < 256; hist[i++] = 0) {}
         for (i = 0; i < len; i += 4) {
           ++hist[val = data[i]];
-
           if (val > max) {max = val;}
           if (val < min) {min = val;}
         }
