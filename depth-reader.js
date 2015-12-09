@@ -1,8 +1,8 @@
 /*!
  * MIT Licensed
- * https://github.com/DavisReef/depth-reader-js
+ * https://github.com/IntelRealSense/depth-reader-js
  * XDM 1.0 spec: https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10
- * Copyright (c)2015 Intel Corporation
+ * Copyright © 2015 Intel Corporation
  */
 (function() {
   'use strict';

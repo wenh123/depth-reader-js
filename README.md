@@ -8,12 +8,12 @@ app (it can also read the Lens Blur format as it maintains backward compatibilit
 The XDM 1.0 spec was jointly developed by Intel and Google, and is available on the
 [Intel Developer Zone](https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10).
 
-:exclamation: This library does not currently parse all metadata described by the
-spec. However, it's hoped that this project will evolve into a generic reader and
-possibly a writer as well in the near future.
+This library does not currently parse all metadata described by the 1.0 spec.
+However, it is hoped that this project will evolve into a complete reader and
+possibly a writer as well in the future.
 
-This library may be used in both browser and Node.js projects, but some tests fail
-if run inside PhantomJS.
+This library may be used in both browser and Node.js projects, but some tests
+fail when run inside PhantomJS.
 
 ## Dependencies
 
@@ -158,11 +158,11 @@ Class **DepthReader** *(constructor takes no arguments)*
   - **blurAtInfinity** *float*
 - **fileData** *ArrayBuffer*/*Buffer* - container JPEG file loaded by loadFile()
 - **image** *object* - reference image
-  - **mime** *string* - image/jpeg or image/png
+  - **mime** *string* - generally image/jpeg
   - **data** *string* - data URI
 - **depth** *object* - enhanced (and normalized) depth map image
   - **metric** *boolean* - if true, near/far values are in meters
-  - **format** *string* - RangeInverse or RangeLinear (see specs)
+  - **format** *string* - RangeInverse or RangeLinear (see spec)
   - **near** *float*
   - **far** *float*
   - **mime** *string* - generally image/png
@@ -197,7 +197,7 @@ Class **DepthReader** *(constructor takes no arguments)*
   - **name** *string* - name to identify this normalizer
   - **func** *function* - **function(**data, opts**)** where data (Uint8ClampedArray) is ImageData.data array that should be modified, opts (object) contains normalizer-specific options, and _this_ is Canvas from which the ImageData is obtained
 
-## Development
+## Contributing
 
 To contribute to the development of this library and to run its unit tests,
 you'll first need to fork this Github project and clone it into your local
@@ -207,7 +207,8 @@ environment, and then install the dev dependencies:
     npm install -g grunt-cli node-gyp
     npm install
 
-Rebuild the minified release after your changes have been tested:
+Rebuild the minified release after your changes have been tested, and then
+submit a pull request:
 
     grunt build
 
@@ -232,6 +233,8 @@ Print depth map information (run HTTP server in separate console):
 
 ## License
 
-The MIT License
+The MIT License. Sample images are provided under the
+Creative Commons Attribution-ShareAlike 4.0 International License.
+See the [LICENSE](LICENSE) file for the specific terms of these licenses.
 
-Copyright (c)2015 Intel Corporation
+Copyright © 2015 Intel Corporation

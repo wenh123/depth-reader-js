@@ -8,7 +8,7 @@
     "depthmap",
     "RealSense"
   ],
-  "homepage": "https://github.com/DavisReef/depth-reader-js",
+  "homepage": "https://github.com/IntelRealSense/depth-reader-js",
   "license": "MIT",
   "authors": [
     "Erhhung Yuan <erhhung.yuan@intel.com>"

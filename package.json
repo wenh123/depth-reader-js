@@ -8,9 +8,9 @@
     "depthmap",
     "RealSense"
   ],
-  "homepage": "https://github.com/DavisReef/depth-reader-js",
+  "homepage": "https://github.com/IntelRealSense/depth-reader-js",
   "bugs": {
-    "url": "https://github.com/DavisReef/depth-reader-js/issues"
+    "url": "https://github.com/IntelRealSense/depth-reader-js/issues"
   },
   "private": false,
   "license": "MIT",
