@@ -36,7 +36,7 @@ before continuing.
 
 If you're having trouble compiling `Cairo` or installing the `node-canvas`
 module on **Windows**, you can, alternatively, download a snapshot of the
-[node_modules\canvas](http://storage.realsense.photo/projects/depth-reader-js/node-canvas-1.3.1-node-5.0-win32.zip)
+[node_modules\canvas](http://cdn.intelrealsense.net/projects/depth-reader-js/node-canvas-1.3.1-node-5.0-win32.zip)
 folder built for Node.js v5.0.
 
 ## Usage
@@ -71,9 +71,9 @@ folder built for Node.js v5.0.
             // but may be cropped to rid objectionable content
             showDimensions(img, 'Reference');
 
-            // normalize depth values between 1-255
+            // normalize depth values between 0-255
             // and shift them by 64 to boost effect
-            return reader.normalizeDepthMap(64);
+            return reader.normalizeDepthMap({bias: 64});
         })
         .then(function(data) { // depth.data
             return loadImage(data);
@@ -186,9 +186,14 @@ Class **DepthReader** *(constructor takes no arguments)*
 - **loadFile(***fileUrl***)** - load XDM or Lens Blur image given JPEG file URL (parseFile() will be invoked automatically)
   - *return:* Promise that will be resolved with this DepthReader instance
 - **parseFile(***buffer***)** - parse XDM or Lens Blur JPEG image given its ArrayBuffer (browser) or Buffer (Node.js) (function is synchronous and returns nothing; exception will be thrown if parsing fails)
-- **normalizeDepthMap(***bias***)** - normalize XDM depth map so that depth values are distributed between 1 and 255 (overwrites the original depth.data; does nothing if JPEG is not XDM or depth.data is null)
-  - **bias** *signed int* - shift depth values (brightness) after distribution (values will be clamped between 1 and 255)
+- **normalizeDepthMap(***[func]***, ***[opts]***)** - normalize XDM depth map so that depth values are distributed between 0 and 255 (function overwrites the original depth.data, but can be called more than once because the original depth map is retained internally; does nothing if JPEG is not XDM or depth.data is null)
+  - **func** *string* - name of a registered normalizer function (default is "default")
+  - **opts** *object* - options passed to normalizer
+    - **bias** *number* - shift depth values (brightness) after normalizing if using the default normalizer
   - *return:* Promise that will be resolved with modified depth.data
+- **registerNormalizer(***[name]***, ***[func]***)** - ***static*** register a normalizer function for use by normalizeDepthMap()
+  - **name** *string* - name to identify normalizer
+  - **func** *function* - **function(***data***, ***opts***)** where data (Uint8ClampedArray) is ImageData.data array that should be modified, opts (object) contains normalizer-specific options, and _this_ is Canvas
 
 ## Development
 

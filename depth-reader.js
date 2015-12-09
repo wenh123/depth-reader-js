@@ -1,9 +1,9 @@
 /*!
-MIT Licensed
-https://github.com/DavisReef/depth-reader-js
-XDM 1.0 spec: https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10
-Copyright (c)2015 Intel Corporation
-*/
+ * MIT Licensed
+ * https://github.com/DavisReef/depth-reader-js
+ * XDM 1.0 spec: https://software.intel.com/en-us/articles/the-extensible-device-metadata-xdm-specification-version-10
+ * Copyright (c)2015 Intel Corporation
+ */
 (function() {
   'use strict';
 
@@ -96,11 +96,13 @@ Copyright (c)2015 Intel Corporation
     };
   };
 
-  /*
-  parse XDM/LensBlur JPEG given its ArrayBuffer
-  (function is synchronous and returns nothing;
-  exception will be thrown if parsing fails)
-  */
+  /**
+   * parse XDM/LensBlur JPEG given its ArrayBuffer
+   * (function is synchronous and returns nothing;
+   * exception will be thrown if parsing fails)
+   *
+   * @param {ArrayBuffer|Buffer} buffer - JPEG image
+   */
   DepthReader.prototype.parseFile = function(buffer) {
     var bytes = new Uint8Array(buffer);
     if (bytes[0] !== 0xff ||
@@ -464,11 +466,12 @@ Copyright (c)2015 Intel Corporation
     return canvas;
   }
 
-  /*
-  load XDM/LensBlur image given JPEG file URL
-  (parseFile() will be invoked automatically)
-  return: Promise that will be resolved with
-  _this_
+  /**
+   * load XDM/LensBlur image given JPEG file URL
+   * (parseFile() will be invoked automatically)
+   *
+   * @param {string} fileUrl - URL for XMLHttpRequest
+   * @return Promise that will be resolved with _this_
   */
   DepthReader.prototype.loadFile = function(fileUrl) {
     var self = this;
@@ -496,80 +499,136 @@ Copyright (c)2015 Intel Corporation
     });
   };
 
-  /*
-  normalize the XDM depthmap so that depth
-  values are distributed between 1 and 255
-  (overwrites the original depth.data)
-  bias: shift depth values (brightness)
-  return: Promise that will be resolved
-  with modified depth.data
-  */
-  DepthReader.prototype.normalizeDepthMap = function(bias) {
-    var depth = this.depth;
-    if (!this.isXDM        ||
-        !depth.data        ||
-         depth._normalized) {
+  /**
+   * normalize the XDM depthmap so that depth
+   * values are distributed between 0 and 255
+   * (overwrites the original depth.data)
+   *
+   * @param {string} [func] - name of a registered normalizer
+   *                          function (default is "default")
+   * @param {object} [opts] - options passed to normalizer
+   * @return Promise that will be resolved with modified
+   *         depth.data
+   */
+  DepthReader.prototype.normalizeDepthMap = function(func, opts) {
+    var  depth = this.depth;
+    if (!depth.data ||
+        !this.isXDM) { // not applicable
       return Promise.resolve(depth.data);
+    }
+    if ('string' !== typeof func) {
+      opts = func; func = 'default';
+    }
+    if ('object' !== typeof opts) {
+      // backward compatibility
+      // for default normalizer
+      opts = {bias: opts};
+    } else if (!opts) {
+      opts = {bias: 0};
+    }
+
+    if (!(func = normalizers[func])) {
+      var err  = new Error('normalizer not registered');
+      return Promise.reject(err);
+    }
+    if (depth._origImage) {
+      return new Promise(function(resolve, reject) {
+        try {
+          resolve(normalize(depth._origImage));
+        } catch (err) {
+          reject(err);
+        }
+      });
     }
     return loadImage(depth.data)
       .then(function(img) {
-        var w      = img.width
-          , h      = img.height
-          , canvas = newCanvas(w, h)
-          , ctx    = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        return (depth._origImage = img);
+      }).then(normalize);
 
-        var pixels = ctx.getImageData(0, 0, w, h)
-          , data   = pixels.data
-          , len    = data.length
-          , total  = len / 4
-          , hist   = new Int32Array(256)
-          , min    = 255
-          , max    = 0
-          , val,  pcnt
-          , norm, prev
-          , i, j;
+    function normalize(img) {
+      var w      = img.width
+        , h      = img.height
+        , canvas = newCanvas(w, h)
+        , ctx    = canvas.getContext('2d');
+      ctx.drawImage(img, 0,0);
 
-        // get min/max depth values
-        for (i = 0; i < len; i += 4) {
-          ++hist[val = data[i]];
-          if (val > max) {max = val;}
-          if (val < min) {min = val;}
-        }
-        // discard min/max outliers
-        for (i = min; i < max; i++) {
-          pcnt = hist[i] / total * 100;
-          if (depthThresh <= pcnt) {break;}
-        }
-        for (j = max; j > min; j--) {
-          pcnt = hist[j] / total * 100;
-          if (depthThresh <= pcnt) {break;}
-        }
-        if (0 < j - i) {
-          min = i; max = j;
-        }
-        var spread = 255 / (max - min + 1);
-        for (i = 0; i < len; i += 4) {
-          if (prev !== (val = data[i])) {
-            prev = val;
-            val  = Math.max(0, Math.min(val, max) - min);
-            norm = Math.round(val * spread + (bias|0));
-            norm = Math.max(1, Math.min(255, norm));
-          }
-          // modify R,G,B not alpha
-          for (j = 0; j < 3; j++) {
-            data[i + j] = norm;
-          }
-        }
-        ctx.putImageData(pixels, 0, 0);
-        depth.data = canvas.toDataURL();
-        depth._normalized = true;
-        return depth.data;
-      });
+      var pixels = ctx.getImageData(0,0, w,h)
+        , data   = pixels.data;
+
+      func.call(canvas, data, opts);
+      ctx.putImageData(pixels, 0,0);
+
+      data = canvas.toDataURL();
+      return (depth.data = data);
+    }
   };
-  // min percent of total depthmap pixels
-  // for determining min/max depth values
-  var depthThresh = 0.1;
+
+  /**
+   * register a normalizer function
+   * for use by normalizeDepthMap()
+   *
+   * @param {string}   name - name to identify normalizer
+   * @param {function} func - function(data, opts) where
+   *        data (Uint8ClampedArray) is ImageData.data
+   *        array that should be modified, opts (object)
+   *        contains normalizer-specific options, _this_
+   *        is Canvas
+   */
+  DepthReader.registerNormalizer = function(name, func) {
+    if ('string'   !== typeof name ||
+        'function' !== typeof func) {
+      throw new Error('invalid name and/or func');
+    }
+    normalizers[name] = func;
+  };
+  var normalizers = {};
+
+  normalizers.default = function(data, opts) {
+    // min percent of total depthmap pixels
+    // for determining min/max depth values
+    var hist   = new Int32Array(256)
+      , bias   = opts.bias | 0
+      , len    = data.length
+      , total  = len / 4
+      , thresh = 0.1
+      , min    = 255
+      , max    = 0
+      , val,  pcnt
+      , norm, prev
+      , i, j, spread;
+
+    // get min/max depth values
+    for (i = 0; i < len; i += 4) {
+      ++hist[val = data[i]];
+      if (val > max) {max = val;}
+      if (val < min) {min = val;}
+    }
+    // discard min/max outliers
+    for (i = min; i < max; i++) {
+      pcnt = hist[i] / total * 100;
+      if (thresh <= pcnt) {break;}
+    }
+    for (j = max; j > min; j--) {
+      pcnt = hist[j] / total * 100;
+      if (thresh <= pcnt) {break;}
+    }
+    if (0 < j - i) {
+      min = i; max = j;
+    }
+    spread = 255 / (max - min + 1);
+    for (i = 0; i < len; i += 4) {
+      if (prev !== (val = data[i])) {
+        prev = val;
+        // clamp val between adjusted min/max first
+        val  = Math.max(0, Math.min(val, max) - min);
+        norm = Math.round(val * spread + bias);
+      }
+      // modify R,G,B not alpha
+      for (j = 0; j < 3; j++) {
+        data[i + j] = norm;
+      }
+    }
+  };
 
   if ('object' === typeof exports) {
     module.exports   = DepthReader;

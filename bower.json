@@ -1,7 +1,7 @@
 {
   "name": "depth-reader",
   "description": "XDM (eXtensible Device Metadata) JPEG file reader",
-  "version": "1.1.8",
+  "version": "1.2.0",
   "keywords": [
     "XDM",
     "LensBlur",
@@ -15,7 +15,7 @@
   ],
   "main": "depth-reader.js",
   "dependencies": {
-    "rsvp": "~3.0.21"
+    "rsvp.js": "rsvp#~3.1.0"
   },
   "ignore": [
     "package.json",
