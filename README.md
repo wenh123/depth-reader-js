@@ -190,7 +190,8 @@ Class **DepthReader** *(constructor takes no arguments)*
 - **normalizeDepthMap(**[func], [opts]**)** - normalize XDM depth map so that depth values are distributed between 0 and 255 (function overwrites the original depth.data, but can be called more than once because the original depth map is retained internally; does nothing if JPEG is not XDM or depth.data is null)
   - **func** *string* - name of a registered normalizer function (default is "default")
   - **opts** *object* - options passed to the normalizer
-    - **bias** *number* - shift depth values (brightness) after normalizing if using the default normalizer
+    - **threshold** *number* - percentage of total pixels below which min/max outliers are discarded (default is 0.1)
+    - **bias** *number* - shift depth values (brightness) after normalizing if using the default normalizer (default is 0)
   - *return:* Promise that will be resolved with modified depth.data
 - **registerNormalizer(**[name], [func]**)** ***static*** - register a normalizer function for use by normalizeDepthMap()
   - **name** *string* - name to identify this normalizer

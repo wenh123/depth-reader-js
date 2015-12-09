@@ -590,7 +590,8 @@
       , bias   = opts.bias | 0
       , len    = data.length
       , total  = len / 4
-      , thresh = 0.1
+      , thresh = isNaN(+opts.threshold)
+               ? 0.1 : +opts.threshold
       , min    = 255
       , max    = 0
       , val,  pcnt
