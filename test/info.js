@@ -1,7 +1,10 @@
 /*
-show depth file info
-node test/info [url]
-*/
+ * show depth file info and
+ * extract contained images
+ *
+ * node info [url] [bias]
+ */
+'use strict';
 
 var DepthReader = require('../depth-reader')
   , Promise     = require('rsvp').Promise
@@ -9,57 +12,59 @@ var DepthReader = require('../depth-reader')
   , path        = require('path')
   , fs          = require('fs');
 
-var fileUrl = process.argv[2] ||
-      'http://localhost:9000/images/xdm-photo1.jpg'
-  , pathname
+var file
+  , args  = parseArgs()
+  , sizes = {}
   , canvas
-  , canvas_
-  , sizes = {};
+  , canvas_;
+
+// change extension to pick output
+// image format: .jpg or .png only
+var extensions = {
+    container:  '.jpg'
+  , reference:  '.jpg'
+  , depthmap:   '.png'
+  , rawdepth:   '.png'
+  , confidence: '.png'
+  };
 
 var reader = new DepthReader;
 reader.debug = true; // save xmpXapXml/xmpExtXml
 
-reader.loadFile(fileUrl)
+reader.loadFile(args.url)
   .then(function() {
     if (reader.xmpXapXml) {
       console.log('  writing: xmpxap.xml');
-      pathname = path.join(__dirname, 'xmpxap.xml');
-      return saveString(reader.xmpXapXml, pathname);
+      file = path.join(__dirname, 'xmpxap.xml');
+      return saveString(reader.xmpXapXml, file);
     }
   })
   .then(function() {
     if (reader.xmpExtXml) {
       console.log('  writing: xmpext.xml');
-      pathname = path.join(__dirname, 'xmpext.xml');
-      return saveString(reader.xmpExtXml, pathname);
+      file = path.join(__dirname, 'xmpext.xml');
+      return saveString(reader.xmpExtXml, file);
     }
   })
   .then(function() {
-    console.log('  writing: container.jpg');
+    console.log('  writing: container'
+               + extensions.container);
     return makeCanvas(reader.fileData)
       .then(function(canvas) {
-        sizes.container = {
-          width:  canvas.width
-        , height: canvas.height
-        };
-        pathname = path.join(__dirname, 'container.jpg');
-        return saveCanvas(canvas, pathname);
+        return saveImage(canvas, 'container');
       });
   })
   .then(function() {
-    console.log('  writing: reference.jpg');
+    console.log('  writing: reference'
+               + extensions.reference);
     return makeCanvas(reader.image.data)
       .then(function(canvas) {
-        sizes.reference = {
-          width:  canvas.width
-        , height: canvas.height
-        };
-        pathname = path.join(__dirname, 'reference.jpg');
-        return saveCanvas(canvas, pathname);
+        return saveImage(canvas, 'reference');
       });
   })
   .then(function() {
-    console.log('  writing: depthmap.png');
+    console.log('  writing: depthmap'
+               + extensions.depthmap);
     return makeCanvas(reader.depth.data)
       .then(function(canvas_) {
         // show histogram of original depthmap first
@@ -68,45 +73,31 @@ reader.loadFile(fileUrl)
           return canvas_;
         }
         // save normalized depthmap
-        return reader.normalizeDepthMap(64)
+        return reader.normalizeDepthMap(args)
           .then(makeCanvas);
       })
       .then(function(canvas) {
         // then show histogram of normalized depthmap
-        canvas_ = canvas;
-        sizes.depthmap = {
-          width:  canvas.width
-        , height: canvas.height
-        };
-        pathname = path.join(__dirname, 'depthmap.png');
-        return saveCanvas(canvas, pathname);
+        return saveImage(canvas_  = canvas, 'depthmap');
       });
   })
   .then(function() {
     if (reader.depth.raw.data) {
-      console.log('  writing: rawdepth.png');
+      console.log('  writing: rawdepth'
+                 + extensions.rawdepth);
       return makeCanvas(reader.depth.raw.data)
         .then(function(canvas) {
-          sizes.rawdepth = {
-            width:  canvas.width
-          , height: canvas.height
-          };
-          pathname = path.join(__dirname, 'rawdepth.png');
-          return saveCanvas(canvas, pathname);
+          return saveImage(canvas, 'rawdepth');
         });
     }
   })
   .then(function() {
     if (reader.confidence.data) {
-      console.log('  writing: confidence.png');
+      console.log('  writing: confidence'
+                 + extensions.confidence);
       return makeCanvas(reader.confidence.data)
         .then(function(canvas) {
-          sizes.confidence = {
-            width:  canvas.width
-          , height: canvas.height
-          };
-          pathname = path.join(__dirname, 'confidence.png');
-          return saveCanvas(canvas, pathname);
+          return saveImage(canvas, 'confidence');
         });
     }
   })
@@ -157,11 +148,33 @@ reader.loadFile(fileUrl)
   });
 
 /**
-save @string to @pathname
-return: Promise
-*/
-function saveString(string, pathname)
-{
+ * parse process.argv
+ *
+ * @return {url,bias}
+ */
+function parseArgs() {
+  var argv  = process.argv
+    , n     = argv.length
+    , bias  = argv[n-1]
+    , url   = argv[n-2]
+    , regex = /(https?|file):/;
+
+  if (regex.test(bias)) {
+    url = bias; bias = '';
+  }
+  return {
+    url:  regex.test(url) ? url :
+         'http://localhost:9000/images/xdm-photo1.jpg'
+  , bias: bias | 0
+  };
+}
+
+/**
+ * save string to pathname
+ *
+ * @return Promise
+ */
+function saveString(string, pathname) {
   return new Promise(function(resolve, reject) {
     try {
       fs.writeFile(pathname, string, function(err) {
@@ -178,6 +191,31 @@ function saveString(string, pathname)
   });
 }
 
+/**
+ * set sizes[which].width & height, then
+ * save canvas to file in current folder.
+ * image format is defined in extensions
+ *
+ * @param which - 'reference','depthmap'...
+ * @return Promise
+ */
+function saveImage(canvas, which) {
+  sizes[which] = {
+    width:  canvas.width
+  , height: canvas.height
+  };
+  var name = which + extensions[which]
+    , file = path.join(__dirname, name);
+  return saveCanvas(canvas, file);
+}
+
+/**
+ * load image asynchronously
+ *
+ * @param  src  - Image.src
+ * @param [img] - Canvas.Image
+ * @return Promise
+ */
 function loadImage(src, img) {
   return new Promise(function(resolve, reject) {
     try {
@@ -198,12 +236,12 @@ function loadImage(src, img) {
 }
 
 /**
-draw image onto new canvas
-@imgSrc: Canvas.Image.src
-return: Canvas
-*/
-function makeCanvas(imgSrc)
-{
+ * draw image onto new canvas
+ *
+ * @param imgSrc - Image.src
+ * @return Canvas
+ */
+function makeCanvas(imgSrc) {
   return loadImage(imgSrc)
     .then(function(img) {
       if (!img.width) {
@@ -217,12 +255,12 @@ function makeCanvas(imgSrc)
 }
 
 /**
-save @canvas to @pathname
-@pathname: .png/.jpg file
-return: Promise
-*/
-function saveCanvas(canvas, pathname)
-{
+ * save canvas to pathname
+ *
+ * @param pathname - .jpg/.png file
+ * @return Promise
+ */
+function saveCanvas(canvas, pathname) {
   return new Promise(function(resolve, reject) {
     try {
       var ext      = path.extname(pathname)
@@ -253,15 +291,14 @@ function saveCanvas(canvas, pathname)
 }
 
 /**
-get {min,max} range of the brightness of pixels in @object
-using the formula: sqrt(0.299*R^2 + 0.587*G^2 + 0.114*B^2)
-
-@object: Canvas, ImageData, or
-         ImageData.data (Canvas.PixelArray)
-[@mono]: if true, uses only R value
-*/
-function getBrightness(object, mono)
-{
+ * get {min,max} range of the brightness of pixels in object
+ * using the formula: sqrt(0.299*R^2 + 0.587*G^2 + 0.114*B^2)
+ *
+ * @param object - Canvas, ImageData, or
+ *                 ImageData.data (Uint8ClampedArray)
+ * @param [mono] - if true, uses only R value
+ */
+function getBrightness(object, mono) {
   var data = getPixelData(object)
     , len  = data.length
     , min  = 255
@@ -289,15 +326,14 @@ function getBrightness(object, mono)
 }
 
 /**
-get the histogram of an image with pixels in @object
-returns {freq:{r[0-255],g[],b[],a[]}, max:{r,g,b,a}}
-
-@object:    Canvas, ImageData, or
-            ImageData.data (Canvas.PixelArray)
-[@channel]: 'r', 'g', 'b', 'a', or undefined
-*/
-function getHistogram(object, channel)
-{
+ * get the histogram of an image with pixels in object
+ *
+ * @param object - Canvas, ImageData, or
+ *                 ImageData.data (Uint8ClampedArray)
+ * @param [channel] - 'r','g','b','a', or undefined
+ * @return {freq:{r[0-255],g[],b[],a[]}, max:{r,g,b,a}}
+ */
+function getHistogram(object, channel) {
   var data =  getPixelData(object)
     , len  =  data.length
     , ch   =  String(channel || 0).toLowerCase()
@@ -326,15 +362,13 @@ function getHistogram(object, channel)
 }
 
 /**
-get ImageData.data as an Uint8ClampedArray
-
-@object: Canvas, ImageData, or
-         ImageData.data (Canvas.PixelArray)
-*/
-function getPixelData(object)
-{
+ * get ImageData.data as an Uint8ClampedArray
+ *
+ * @param object - Canvas, ImageData, or
+ *                 ImageData.data (Canvas.PixelArray)
+ */
+function getPixelData(object) {
   var type = object.toString.call(object);
-
   if ('[object CanvasPixelArray]' === type) {
     return object;
   } else if ('[object ImageData]' === type) {
@@ -344,24 +378,24 @@ function getPixelData(object)
     , h      = object.height
     , ctx    = object.getContext('2d')
     , pixels = ctx.getImageData(0, 0, w, h);
-
   return pixels.data;
 }
 
-// pad @value converted to string with leading zeros
-// so it's at least @width characters long (up to 6)
+/**
+ * pad value converted to string with leading zeros
+ * so it's at least width characters long (up to 6)
+ */
 function padZero(value, width) {
-  return pad(value, width, '000000')
+  return pad(value, width, '000000');
 }
 
 /**
-pad given string with filler characters on left/right
-
-@width:    if > 0, pad left; if < 0, pad right
-[@filler]: padding characters (length >= width)
-*/
-function pad(string, width, filler)
-{
+ * pad given string with filler characters on left/right
+ *
+ * @param  width   - if > 0, pad left; if < 0, pad right
+ * @param [filler] - padding characters (length >= width)
+ */
+function pad(string, width, filler) {
   filler = String(filler || '                    ');
   string = String(string || '');
   if (!(width = ~~width)) {
