@@ -3,7 +3,11 @@
  * extract contained images
  *
  * node info [url] [bias]
+ *
+ * MIT Licensed
+ * Copyright © 2016 Intel Corporation
  */
+'format global';
 'use strict';
 
 var DepthReader = require('../depth-reader')

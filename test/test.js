@@ -1,3 +1,10 @@
+/*
+ * depth-reader-js unit tests
+ *
+ * MIT Licensed
+ * Copyright © 2016 Intel Corporation
+ */
+'format global';
 (function() {
   'use strict';
 
@@ -8,7 +15,7 @@
     , chaiAsPromised
     , chai;
 
-  if ('object' === typeof exports) { // Node.js
+  if (undefined  === window) { // Node.js
     Image          = require('canvas').Image;
     Promise        = require('rsvp').Promise;
     DepthReader    = require('../depth-reader');

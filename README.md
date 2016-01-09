@@ -237,4 +237,4 @@ The MIT License. Sample images are provided under the
 Creative Commons Attribution-ShareAlike 4.0 International License.
 See the [LICENSE](LICENSE) file for the specific terms of these licenses.
 
-Copyright © 2015 Intel Corporation
+Copyright © 2016 Intel Corporation
