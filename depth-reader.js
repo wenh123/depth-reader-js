@@ -479,8 +479,8 @@
 
     return new Promise(function(resolve, reject) {
       var xhr = new XMLHttpRequest;
-      xhr.responseType = xhrResType;
       xhr.open('GET', fileUrl);
+      xhr.responseType = xhrResType;
 
       xhr.onload = function() {
         if (this.response) {
