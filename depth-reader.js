@@ -16,7 +16,7 @@
     , Canvas
     , Image;
 
-  if (undefined  === window) { // Node.js
+  if ('undefined' === typeof window) { // Node.js
     xhrResType     = 'buffer';
     Promise        = require('rsvp').Promise;
     XMLHttpRequest = require('xhr2');
@@ -632,7 +632,78 @@
     }
   };
 
-  if (undefined  === window) {
+  DepthReader.prototype.toJSON = function() {
+    /* jshint camelcase: false */
+    var json     = {is_xdm: this.isXDM}
+      , devVend  =  this.device.vendor
+      , devPose  =  this.device.pose
+      , camVend  =  this.camera.vendor
+      , camPose  =  this.camera.pose
+      , persp    =  this.perspective
+      , focus    =  this.focus
+      , depth    =  this.depth;
+
+    if (this.isXDM) {
+      Object.assign(json, {
+        revision: this.revision
+      , device: {
+          vendor: {
+            manufacturer: devVend.manufacturer
+          , model:        devVend.model
+          }
+        , pose: {
+            latitude:  devPose.latitude
+          , longitude: devPose.longitude
+          , altitude:  devPose.altitude
+          }
+        }
+      , camera: {
+          vendor: {
+            manufacturer: camVend.manufacturer
+          , model:        camVend.model
+          }
+        , pose: {
+            position_x:      camPose.positionX
+          , position_y:      camPose.positionY
+          , position_z:      camPose.positionZ
+          , rotation_axis_x: camPose.rotationAxisX
+          , rotation_axis_y: camPose.rotationAxisY
+          , rotation_axis_z: camPose.rotationAxisZ
+          , rotation_angle:  camPose.rotationAngle
+          }
+        }
+      , perspective: {
+          focal_length_x:    persp.focalLengthX
+        , focal_length_y:    persp.focalLengthY
+        , principal_point_x: persp.principalPointX
+        , principal_point_y: persp.principalPointY
+        }
+      , depth: {
+          metric: depth.metric
+        , format: depth.format
+        , near:   depth.near
+        , far:    depth.far
+        }
+      });
+    } else {
+      Object.assign(json, {
+        focus: {
+          focal_point_x:    focus.focalPointX
+        , focal_point_y:    focus.focalPointY
+        , focal_distance:   focus.focalDistance
+        , blur_at_infinity: focus.blurAtInfinity
+        }
+      , depth: {
+          format: depth.format
+        , near:   depth.near
+        , far:    depth.far
+        }
+      });
+    }
+    return json;
+  };
+
+  if ('undefined' === typeof window) { // Node.js
     module.exports = DepthReader;
   } else { // browser
     root.DepthReader = DepthReader;

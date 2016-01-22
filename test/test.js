@@ -15,7 +15,7 @@
     , chaiAsPromised
     , chai;
 
-  if (undefined  === window) { // Node.js
+  if ('undefined' === typeof window) { // Node.js
     Image          = require('canvas').Image;
     Promise        = require('rsvp').Promise;
     DepthReader    = require('../depth-reader');
@@ -54,6 +54,15 @@
   describe('DepthReader Class', function() {
     var baseUrl = 'http://localhost:9000/images/'
       , image;
+
+    // register silly normalizer that sets
+    // all depthmap pixels to (0,0,255,0)
+    DepthReader.registerNormalizer('blue'
+      , function(data, opts) {
+          for (var i = 0, n = data.length; i < n; i++) {
+            data[i] = 2 === (i % 4) ? 255 : 0;
+          }
+        });
 
     context('"xdm-photo1.jpg" (XDM v1.0)', function() {
       var jpegUrl = baseUrl + 'xdm-photo1.jpg'
@@ -128,7 +137,7 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image of 2880x2067', function() {
+      it('should have reference image at 2880x2067', function() {
         return loadImage(reader.image.data)
           .then(function(img) {
             img.width.should.equal(2880);
@@ -162,15 +171,30 @@
       });
 
       // FIX: depthmap has different aspect ratio as reference
-      it('should have depthmap image of 496x352', function() {
-        return reader.normalizeDepthMap()
-          .then(function(data) {
-            return loadImage(data);
-          })
+      it('should have depthmap image at 496x352', function() {
+        return loadImage(reader.depth.data)
           .then(function(img) {
             image = img;
             img.width.should.equal(496);
             img.height.should.equal(352);
+          });
+      });
+
+      it('should have depth.data:100- = "O0729vs7ux"', function() {
+        reader.depth.data.substr(100, 10).should.equal('O0729vs7ux');
+      });
+
+      it('should have applied the default normalizer', function() {
+        return reader.normalizeDepthMap()
+          .then(function(data) {
+            data.substr(100, 10).should.equal('R4nOy9XYtc');
+          });
+      });
+
+      it('should have applied the "blue" normalizer', function() {
+        return reader.normalizeDepthMap('blue')
+          .then(function(data) {
+            data.substr(100, 10).should.equal('R4nO3BMQEA');
           });
       });
 
@@ -183,7 +207,7 @@
         reader.depth.raw.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have raw depthmap image of 480x360', function() {
+      it('should have raw depthmap image at 480x360', function() {
         return loadImage(reader.depth.raw.data)
           .then(function(img) {
             img.width.should.equal(480);
@@ -206,6 +230,16 @@
             img.width.should.equal(image.width);
             img.height.should.equal(image.height);
           });
+      });
+
+      it('should have generated custom serialized JSON', function() {
+        JSON.stringify(reader).should.equal('{"is_xdm":true,"revision":1'
+          + ',"device":{"vendor":{"manufacturer":"Intel Corporation","model":"R200"}'
+            + ',"pose":{"latitude":0,"longitude":0,"altitude":0}}'
+          + ',"camera":{"vendor":{"manufacturer":"Intel Corporation","model":"R200"}'
+            + ',"pose":{"position_x":54.112148,"position_y":-14.849542,"position_z":-0.822005,"rotation_axis_x":0.991072,"rotation_axis_y":-0.076687,"rotation_axis_z":0.109065,"rotation_angle":6.262739}}'
+          + ',"perspective":{"focal_length_x":0.883098,"focal_length_y":0.884171,"principal_point_x":0.538516,"principal_point_y":0.512869}'
+          + ',"depth":{"metric":false,"format":"RangeLinear","near":0,"far":65535}}');
       });
     });
 
@@ -283,7 +317,7 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image of 2966x2253', function() {
+      it('should have reference image at 2966x2253', function() {
         return loadImage(reader.image.data)
           .then(function(img) {
             img.width.should.equal(2966);
@@ -316,11 +350,8 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image of 472x352', function() {
-        return reader.normalizeDepthMap()
-          .then(function(data) {
-            return loadImage(data);
-          })
+      it('should have depthmap image at 472x352', function() {
+        return loadImage(reader.depth.data)
           .then(function(img) {
             image = img;
             img.width.should.equal(472);
@@ -410,7 +441,7 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image of 2965x2254', function() {
+      it('should have reference image at 2965x2254', function() {
         return loadImage(reader.image.data)
           .then(function(img) {
             img.width.should.equal(2965);
@@ -443,11 +474,8 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image of 472x352', function() {
-        return reader.normalizeDepthMap()
-          .then(function(data) {
-            return loadImage(data);
-          })
+      it('should have depthmap image at 472x352', function() {
+        return loadImage(reader.depth.data)
           .then(function(img) {
             image = img;
             img.width.should.equal(472);
@@ -496,7 +524,7 @@
         reader.image.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have reference image of 576x1024', function() {
+      it('should have reference image at 576x1024', function() {
         return loadImage(reader.image.data)
           .then(function(img) {
             img.width.should.equal(576);
@@ -529,7 +557,7 @@
         reader.depth.data.slice(0, 5).should.equal('data:');
       });
 
-      it('should have depthmap image of 576x1024', function() {
+      it('should have depthmap image at 576x1024', function() {
         return loadImage(reader.depth.data)
           .then(function(img) {
             img.width.should.equal(576);
@@ -548,6 +576,12 @@
 
       it('should have set focus.blurAtInfinity to 0.014069436', function() {
         reader.focus.blurAtInfinity.should.equal(0.014069436);
+      });
+
+      it('should have generated custom serialized JSON', function() {
+        JSON.stringify(reader).should.equal('{"is_xdm":false'
+          + ',"focus":{"focal_point_x":0.5,"focal_point_y":0.5,"focal_distance":9.190595,"blur_at_infinity":0.014069436}'
+          + ',"depth":{"format":"RangeInverse","near":6.097831726074219,"far":24.221643447875977}}');
       });
     });
   });

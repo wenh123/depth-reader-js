@@ -92,6 +92,12 @@ folder built for Node.js v5.0.
                 showDimensions(img, 'Confidence');
             }
         })
+        .then(function() {
+            // dump serialized metadata
+            // without data from images
+            console.log('image metadata:');
+            console.log(JSON.stringify(reader, null, 2));
+        })
         .catch(function(err) {
             console.error('loading failed:', err);
         });
