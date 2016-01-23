@@ -633,9 +633,7 @@
   };
 
   DepthReader.prototype.toJSON = function() {
-    /* jshint camelcase: false */
-    var json     = {is_xdm: this.isXDM}
-      , devVend  =  this.device.vendor
+    var devVend  =  this.device.vendor
       , devPose  =  this.device.pose
       , camVend  =  this.camera.vendor
       , camPose  =  this.camera.pose
@@ -643,9 +641,11 @@
       , focus    =  this.focus
       , depth    =  this.depth;
 
+    /* jshint camelcase: false */
     if (this.isXDM) {
-      Object.assign(json, {
-        revision: this.revision
+      return {
+        is_xdm:   true
+      , revision: this.revision
       , device: {
           vendor: {
             manufacturer: devVend.manufacturer
@@ -684,10 +684,11 @@
         , near:   depth.near
         , far:    depth.far
         }
-      });
+      };
     } else {
-      Object.assign(json, {
-        focus: {
+      return {
+        is_xdm: false
+      , focus: {
           focal_point_x:    focus.focalPointX
         , focal_point_y:    focus.focalPointY
         , focal_distance:   focus.focalDistance
@@ -698,9 +699,8 @@
         , near:   depth.near
         , far:    depth.far
         }
-      });
+      };
     }
-    return json;
   };
 
   if ('undefined' === typeof window) { // Node.js
