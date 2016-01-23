@@ -1,7 +1,7 @@
 language: node_js
 
 node_js:
-  - "0.10"
+  - "0.12"
   - "stable"
 
 branches:
@@ -31,7 +31,7 @@ before_install:
   - npm install -g mocha
 
 install:
-  - npm   install
+  - npm install
   - bower install
 
 script:
