@@ -7,12 +7,13 @@ module.exports = function(grunt) {
   // Time how long tasks take
   require('time-grunt')(grunt);
 
-  var pkg        = require('./package')
-    , modulename = pkg.title || pkg.name;
+  var pkg        =  require('./package')
+    , moduleName =  pkg.title || pkg.name
+    , nodeMajVer = +process.versions.node[0];
 
   grunt.initConfig({
     pkg:        pkg,
-    modulename: modulename,
+    modulename: moduleName,
 
     /**
      * Watch files and do stuff
@@ -84,9 +85,9 @@ module.exports = function(grunt) {
       },
       coverage: {
         options: {
-          coveralls: true,
-          reporter: 'mocha-lcov-reporter',
-          output: 'coverage.lcov'
+          coveralls: nodeMajVer ?  true : false,
+          reporter:  nodeMajVer ? 'mocha-lcov-reporter' : 'spec',
+          output:    nodeMajVer ? 'coverage.lcov'       :  null
         }
       },
       options: {
