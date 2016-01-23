@@ -187,14 +187,20 @@
       it('should have applied the default normalizer', function() {
         return reader.normalizeDepthMap()
           .then(function(data) {
-            data.substr(100, 10).should.equal('R4nOy9XYtc');
+            data.substr(100, 10).should.satisfy(function(value) {
+              return 'R4nOy9XYtc' === value  // canvas
+                  || 'JKWxEPeMAD' === value; // Chrome
+            });
           });
       });
 
       it('should have applied the "blue" normalizer', function() {
         return reader.normalizeDepthMap('blue')
           .then(function(data) {
-            data.substr(100, 10).should.equal('R4nO3BMQEA');
+            data.substr(100, 10).should.satisfy(function(value) {
+              return 'R4nO3BMQEA' === value  // canvas
+                  || 'aQM3DnCBAg' === value; // Chrome
+            });
           });
       });
 

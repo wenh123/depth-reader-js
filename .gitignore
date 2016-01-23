@@ -5,3 +5,4 @@ test/*.out
 test/*.xml
 test/*.jpg
 test/*.png
+*.lcov

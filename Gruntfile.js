@@ -66,17 +66,33 @@ module.exports = function(grunt) {
           livereload: false,
           open: 'http://localhost:<%= connect.options.port %>/test/test.html'
         }
+      },
+      coverage: {
+        options: {
+          livereload: false
+        }
       }
     },
 
     // Mocha for Node.js testing
-    mochacli: {
+    mochacov: {
+      test: {
+        options: {
+          reporter: 'spec',
+          timeout: 5000
+        }
+      },
+      coverage: {
+        options: {
+          coveralls: true,
+          reporter: 'mocha-lcov-reporter',
+          output: 'coverage.lcov'
+        }
+      },
       options: {
         ui: 'bdd',
-        reporter: 'spec',
-        timeout: 5000
-      },
-      all: ['test/test.js']
+        files: 'test/test.js'
+      }
     },
 
     // Mocha for browser testing
@@ -145,8 +161,13 @@ module.exports = function(grunt) {
 
   grunt.registerTask('test', [
     'connect:test',
-    'mochacli:all',
+    'mochacov:test',
     'mocha_phantomjs'
+  ]);
+
+  grunt.registerTask('travis', [
+    'connect:coverage',
+    'mochacov:coverage'
   ]);
 
   grunt.registerTask('default', [
