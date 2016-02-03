@@ -195,13 +195,6 @@ module.exports = function(grunt) {
     }
   });
 
-  grunt.loadNpmTasks('grunt-contrib-connect');
-  grunt.loadNpmTasks('grunt-contrib-uglify');
-  grunt.loadNpmTasks('grunt-jscoverage');
-  grunt.loadNpmTasks('grunt-coveralls');
-  grunt.loadNpmTasks('grunt-mocha-cli');
-  grunt.loadNpmTasks('grunt-mocha-phantomjs');
-
   grunt.registerTask('report_coverage', function() {
     var rep1  = grunt.config(       'mochacli.coverage.options.reporter')
       , rep2  = grunt.config('mocha_phantomjs.coverage.options.reporter')
@@ -209,10 +202,12 @@ module.exports = function(grunt) {
 
     if (regex.test(rep1) &&
         regex.test(rep2)) {
-      grunt.task.run('merge_jsoncov', 'coveralls');
-    } else {
-      grunt.log.writeln('reporting not required.');
+      grunt.task.run('merge_jsoncov');
+      if (process.env.TRAVIS) {
+        return grunt.task.run('coveralls');
+      }
     }
+    grunt.log.writeln('Reporting not requested.');
   });
 
   grunt.registerTask('merge_jsoncov', function() {
