@@ -207,7 +207,7 @@ module.exports = function(grunt) {
     grunt.config.requires(conf);
 
     var opts  = grunt.config(conf.slice(0,-1))
-      , names = opts.files
+      , names = opts.src
       , objs  = names.map(function(file) {
           return require('./' + file);
         })
