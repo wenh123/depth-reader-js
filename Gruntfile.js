@@ -202,6 +202,19 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-mocha-cli');
   grunt.loadNpmTasks('grunt-mocha-phantomjs');
 
+  grunt.registerTask('report_coverage', function() {
+    var rep1  = grunt.config(       'mochacli.coverage.options.reporter')
+      , rep2  = grunt.config('mocha_phantomjs.coverage.options.reporter')
+      , regex = /cov/;
+
+    if (regex.test(rep1) &&
+        regex.test(rep2)) {
+      grunt.task.run('merge_jsoncov', 'coveralls');
+    } else {
+      grunt.log.writeln('reporting not required.');
+    }
+  });
+
   grunt.registerTask('merge_jsoncov', function() {
     var conf = ['merge_jsoncov','options','src'];
     grunt.config.requires(conf);
@@ -308,8 +321,7 @@ module.exports = function(grunt) {
     'jscoverage',
     'mochacli:coverage',
     'mocha_phantomjs:coverage',
-    'merge_jsoncov',
-    'coveralls'
+    'report_coverage'
   ]);
 
   grunt.registerTask('default', [
