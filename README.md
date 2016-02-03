@@ -32,8 +32,7 @@ This library does not currently parse all metadata described by the 1.0 spec.
 However, it is hoped that this project will evolve into a complete reader and
 possibly a writer as well in the future.
 
-This library may be used in both browser and Node.js projects, but some tests
-fail when run inside PhantomJS.
+This library may be used in both browser and Node.js apps, including PhantomJS.
 
 ## Dependencies
 
@@ -250,10 +249,9 @@ Run Node.js tests in the console and browser tests in a web page:
 
     npm start
 
-Print depth map information (run HTTP server in separate console):
+Print depth map information:
 
-    grunt serve
-    node test/info
+    node test/info [pathname|url]
 
 ## Authors
 

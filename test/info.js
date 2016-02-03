@@ -2,7 +2,7 @@
  * show depth file info and
  * extract contained images
  *
- * node info [url] [bias]
+ * node info [pathname|url] [bias]
  *
  * MIT Licensed
  * Copyright © 2016 Intel Corporation
@@ -35,7 +35,22 @@ var extensions = {
 var reader = new DepthReader;
 reader.debug = true; // save xmpXapXml/xmpExtXml
 
-reader.loadFile(args.url)
+(function() {
+  if (args.url) {
+    // .loadFile() assigns .fileData
+    return reader.loadFile(args.url);
+  }
+  return loadFile(args.file)
+    .then(function(buf) {
+      /*
+       * assigning to .fileData is NOT required
+       * (done here just to write out container
+       * image later)
+       */
+      reader.fileData = buf;
+      reader.parseFile(buf);
+    });
+})()
   .then(function() {
     if (reader.xmpXapXml) {
       console.log('  writing: xmpxap.xml');
@@ -154,23 +169,49 @@ reader.loadFile(args.url)
 /**
  * parse process.argv
  *
- * @return {url,bias}
+ * @return {file|url,bias}
  */
 function parseArgs() {
-  var argv  = process.argv
-    , n     = argv.length
-    , bias  = argv[n-1]
-    , url   = argv[n-2]
-    , regex = /(https?|file):/;
+  var argv  = process.argv.slice(2)
+    , file  = argv[0]
+    , bias  = argv[1]
+    , regex = /(https?|file):/
+    , ret   = {};
 
   if (regex.test(bias)) {
-    url = bias; bias = '';
+    file = bias; bias = '';
   }
-  return {
-    url:  regex.test(url) ? url :
-         'http://localhost:9000/images/xdm-photo1.jpg'
-  , bias: bias | 0
-  };
+  if (regex.test(file)) {
+    ret.url  = file;
+  } else {
+    ret.file = file || path.join(__dirname, '..'
+                    , 'images', 'xdm-photo1.jpg');
+  }
+  ret.bias = bias | 0;
+  return ret;
+}
+
+/**
+ * load the specified file
+ *
+ * @return Promise -> Buffer
+ */
+function loadFile(pathname) {
+  // yes, using "fs-async" would be easier...
+  return new Promise(function(resolve, reject) {
+    try {
+      fs.readFile(pathname, function(err, buf) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(buf);
+        }
+      });
+    } catch (err) {
+      var msg = 'loadFile failed: ' + err.message;
+      reject(new Error(msg));
+    }
+  });
 }
 
 /**
@@ -218,7 +259,7 @@ function saveImage(canvas, which) {
  *
  * @param  src  - Image.src
  * @param [img] - Canvas.Image
- * @return Promise
+ * @return Promise -> Image
  */
 function loadImage(src, img) {
   return new Promise(function(resolve, reject) {
