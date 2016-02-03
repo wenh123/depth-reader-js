@@ -142,7 +142,7 @@ module.exports = function(grunt) {
     },
 
     coveralls: {
-      options: {
+      all: {
         src: 'coverage.lcov'
       }
     },
@@ -187,7 +187,7 @@ module.exports = function(grunt) {
         preserveComments: 'some',
         sourceMap:         true
       },
-      my_target: {
+      all: {
         files: {
           'depth-reader.min.js': ['depth-reader.js']
         }
