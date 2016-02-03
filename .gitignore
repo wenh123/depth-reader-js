@@ -1,8 +1,9 @@
 bower_components/
 node_modules/
 samples
+*.cov.js
+coverage*
 test/*.out
 test/*.xml
 test/*.jpg
 test/*.png
-*.lcov

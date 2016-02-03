@@ -18,7 +18,7 @@
   if ('undefined' === typeof window) { // Node.js
     Image          = require('canvas').Image;
     Promise        = require('rsvp').Promise;
-    DepthReader    = require('../depth-reader');
+    DepthReader    = require('../depth-reader.cov');
     chaiAsPromised = require('chai-as-promised');
     chai           = require('chai');
   } else { // browser
@@ -67,6 +67,7 @@
     context('"xdm-photo1.jpg" (XDM v1.0)', function() {
       var jpegUrl = baseUrl + 'xdm-photo1.jpg'
         , reader  = new DepthReader;
+      reader.debug = true;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);
@@ -187,9 +188,12 @@
       it('should have applied the default normalizer', function() {
         return reader.normalizeDepthMap()
           .then(function(data) {
-            data.substr(100, 10).should.satisfy(function(value) {
-              return 'R4nOy9XYtc' === value  // canvas
-                  || 'JKWxEPeMAD' === value; // Chrome
+            data.substr(250, 10).should.satisfy(function(value) {
+              return -1 !== [
+                  '7LOe9bb3uf' // canvas
+                , '9m//9tuU8v' // Chrome
+                , 'XhkZsS8nT2' // PhantomJS
+                ].indexOf(value);
             });
           });
       });
@@ -197,9 +201,11 @@
       it('should have applied the "blue" normalizer', function() {
         return reader.normalizeDepthMap('blue')
           .then(function(data) {
-            data.substr(100, 10).should.satisfy(function(value) {
-              return 'R4nO3BMQEA' === value  // canvas
-                  || 'aQM3DnCBAg' === value; // Chrome
+            data.substr(250, 10).should.satisfy(function(value) {
+              return -1 !== [
+                  'AAAAAAAAAA' // canvas/PhantomJS
+                , 'IECAAAECQQ' // Chrome
+                ].indexOf(value);
             });
           });
       });
@@ -512,6 +518,7 @@
     context('"lbr-photo1.jpg" (Lens Blur)', function() {
       var jpegUrl = baseUrl + 'lbr-photo1.jpg'
         , reader  = new DepthReader;
+      reader.debug = true;
 
       it('should successfully load JPEG file', function() {
         return reader.loadFile(jpegUrl).should.eventually.equal(reader);

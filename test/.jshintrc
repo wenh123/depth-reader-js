@@ -1,6 +1,6 @@
 {
   "node": true,
-  "esnext": true,
+  "esnext": false,
   "bitwise": false,
   "browser": false,
   "camelcase": true,
@@ -8,7 +8,7 @@
   "eqeqeq": true,
   "expr": true,
   "immed": true,
-  "indent": 2,
+  "indent": false,
   "laxcomma": true,
   "laxbreak": true,
   "loopfunc": true,

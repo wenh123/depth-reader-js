@@ -421,7 +421,7 @@
     try {
       return String.fromCharCode.apply(null, arr);
     } catch (err) {
-      // workaround PhantomJS bug:
+      // work around PhantomJS bug:
       // https://github.com/ariya/phantomjs/issues/11172
       var i = -1
         , j = arr.length
@@ -559,7 +559,10 @@
       func.call(canvas, data, opts);
       ctx.putImageData(pixels, 0,0);
 
-      data = canvas.toDataURL();
+      // type + encoder options added
+      // to work around PhantomJS bug:
+      // https://github.com/ariya/phantomjs/issues/10455
+      data = canvas.toDataURL('image/png', 0);
       return (depth.data = data);
     }
   };

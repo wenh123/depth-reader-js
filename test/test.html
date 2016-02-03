@@ -14,15 +14,11 @@
       mocha.reporter('html');
       mocha.timeout(10000);
     </script>
-    <script src="/rsvp/rsvp.js"></script>
-    <script src="/depth-reader.js"></script>
+    <script src="/rsvp/dist/rsvp.js"></script>
+    <script src="/depth-reader.cov.js"></script>
     <script src="/test/test.js"></script>
     <script>
-      if (window.mochaPhantomJS) {
-        mochaPhantomJS.run();
-      } else {
-        mocha.run();
-      }
+      mocha.run();
     </script>
   </body>
 </html>
