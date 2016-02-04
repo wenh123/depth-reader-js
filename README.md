@@ -251,7 +251,7 @@ Run Node.js tests in the console and browser tests in a web page:
 
 Print depth map information:
 
-    node test/info [pathname|url]
+    node test/info [pathname|URL]
 
 ## Authors
 

@@ -162,8 +162,8 @@ reader.debug = true; // save xmpXapXml/xmpExtXml
       }
     });
   })
-  .catch(function(error) {
-    console.error('loading failed:', error);
+  .catch(function(err) {
+    console.error('ERROR:', err.message);
   });
 
 /**
