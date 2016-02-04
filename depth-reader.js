@@ -6,7 +6,7 @@
  */
 'format global';
 (function() {
-  'use strict';
+'use strict';
 
   var root = this // _window_ if in browser
     , xhrResType
@@ -105,10 +105,11 @@
    * @param {ArrayBuffer|Buffer} buffer - JPEG image
    */
   DepthReader.prototype.parseFile = function(buffer) {
-    var bytes = new Uint8Array(buffer);
+    var bytes = buffer instanceof Uint8Array ?
+                buffer : new Uint8Array(buffer);
     if (bytes[0] !== 0xff ||
         bytes[1] !== 0xd8) { // JPEG start-of-image
-      throw new Error('file is not JPEG image');
+      throw new Error('file is not a JPEG image');
     }
     var xmpXapXml = ''
       , xmpExtXml = ''
@@ -140,13 +141,14 @@
         }
       }
     }
-    if (this.debug) {
-      // expose for inspection
+    if (this.debug && !this.xmpExtXml) {
+      // expose XMP XML for inspection
+      // unless injected (for testing)
       this.xmpXapXml = xmpXapXml;
       this.xmpExtXml = xmpExtXml;
     }
-    var xapDescElt = parseRDF(this, xmpXapXml)
-      , extDescElt = parseRDF(this, xmpExtXml)
+    var xapDescElt = parseRDF(this, this.xmpXapXml || xmpXapXml)
+      , extDescElt = parseRDF(this, this.xmpExtXml || xmpExtXml)
       , imageNS    =    getNS(this, 'Image');
 
      this.isXDM = /xdm\.org/.test(imageNS);
@@ -293,11 +295,15 @@
         , xmlDoc  = parser.parseFromString(xmpXml, 'application/xml')
         , rdfDesc = lastDesc(firstChild(xmlDoc.documentElement));
 
-      readNS(self, rdfDesc);
-      return       rdfDesc;
+      // no exception is thrown in browser if the input
+      // is empty string, but DOM contains <parsererror>
+      if ('rdf:Description' === rdfDesc.tagName) {
+        readNS(self, rdfDesc);
+        return       rdfDesc;
+      }
     } catch (err) {
-      throw new Error('cannot parse XMP XML');
     }
+    throw new Error('cannot parse the XMP XML');
   }
 
   // get child rdf:Description;
@@ -440,20 +446,14 @@
 
   function loadImage(src, img) {
     return new Promise(function(resolve, reject) {
-      try {
-        if (!img) {
-          img = new Image;
-        }
-        img.onload = function() {
-          resolve(img);
-        };
-        img.onerror = function() {
-          reject(new Error('cannot load image'));
-        };
-        img.src = src;
-      } catch (err) {
-        reject(err);
+      if (!img) {
+        img = new Image;
       }
+      img.onload  = function() { resolve(img); };
+      img.onerror = function() {
+        reject(new Error('cannot load image'));
+      };
+      img.src = src;
     });
   }
 
@@ -478,25 +478,45 @@
     var self = this;
 
     return new Promise(function(resolve, reject) {
-      var xhr = new XMLHttpRequest;
-      xhr.open('GET', fileUrl);
-      xhr.responseType = xhrResType;
+      var msg;
+      try {
+        var xhr = new XMLHttpRequest;
+        xhr.open('GET', fileUrl);
+        xhr.responseType = xhrResType;
 
-      xhr.onload = function() {
-        if (this.response) {
-          try { // parsing is synchronous
-            self.fileData = this.response;
-            self.parseFile.call(self, self.fileData);
-            resolve(self);
-          } catch (err) {
-            reject(err);
+        xhr.onload = function() {
+          if (2 === (this.status / 100 | 0)) {
+            try {  // parsing is synchronous
+              self.fileData = this.response;
+              self.parseFile.call(self, self.fileData);
+              resolve(self);
+            }
+            catch (err) {
+              reject(err);
+            }
+          } else {
+            msg = 'cannot load file ['+ this.status +']';
+            if (this.response && this.response.length) {
+              msg += ': ' + baToStr(this.response, 0,50).trim();
+            }
+            reject(new Error(msg));
           }
-        } else {
-          var msg = 'cannot load file [' + this.status + ']';
+        };
+        xhr.onerror = function() {
+          msg = 'cannot load file: ';
+          if (/^file:/.test(fileUrl)) {
+            msg += 'file not found';
+          } else {
+            msg += 'host not found';
+          }
           reject(new Error(msg));
-        }
-      };
-      xhr.send();
+        };
+        xhr.send();
+      }
+      catch (err) {
+        msg = err.message || 'URL protocol error';
+        reject(new Error(msg));
+      }
     });
   };
 
@@ -556,7 +576,12 @@
       var pixels = ctx.getImageData(0,0, w,h)
         , data   = pixels.data;
 
-      func.call(canvas, data, opts);
+      try {
+        func.call(canvas, data, opts);
+      } catch (err) {
+        var msg = 'normalizer failed: ' + err.message.trim();
+        throw new Error(msg);
+      }
       ctx.putImageData(pixels, 0,0);
 
       // type + encoder options added

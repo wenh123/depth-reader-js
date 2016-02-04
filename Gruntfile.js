@@ -1,5 +1,5 @@
 module.exports = function(grunt) {
-  'use strict';
+'use strict';
 
   // Load grunt tasks automatically
   require('load-grunt-tasks')(grunt);
@@ -10,6 +10,8 @@ module.exports = function(grunt) {
   var pkg        =  require('./package')
     , moduleName =  pkg.title || pkg.name
     , nodeMajVer = +process.versions.node[0];
+
+  process.stderr.write = function() {};
 
   grunt.initConfig({
     pkg:        pkg,
@@ -111,6 +113,12 @@ module.exports = function(grunt) {
     mocha_phantomjs: {
       options:  {
         urls:   ['http://localhost:<%= connect.options.port %>/test/test.html'],
+        config: {
+          ignoreResourceErrors: true
+        },
+        phantomConfig: {
+          '--web-security': false
+        },
         timeout: 10000
       },
       test: {
@@ -214,10 +222,16 @@ module.exports = function(grunt) {
     var conf = ['merge_jsoncov','options','src'];
     grunt.config.requires(conf);
 
-    var opts  = grunt.config(conf.slice(0,-1))
+    var fs    = require('fs')
+      , opts  = grunt.config(conf.slice(0,-1))
       , names = opts.src
+      , name
       , objs  = names.map(function(file) {
-          return require('./' + file);
+          // can't just use require() because
+          // PhantomJS dumps errors to stdout
+          var json = fs.readFileSync(file, 'utf8')
+                  .replace(/^(.*\r?\n)*(?=\{)/,'');
+          return JSON.parse(json);
         })
       , obj   = objs[0]
       , files = objs.map(function(obj) {
@@ -256,10 +270,9 @@ module.exports = function(grunt) {
     obj.misses   = file.misses   = sloc - hits;
     obj.coverage = file.coverage = hits / sloc * 100;
 
-    var fs   = require('fs')
-      , name = opts.dest &&  opts.dest.json  ||
-             (!opts.dest || !opts.dest.lcov) &&
-                             'coverage.json';
+    name = opts.dest &&  opts.dest.json  ||
+         (!opts.dest || !opts.dest.lcov) &&
+                         'coverage.json';
     if (name) {
       var json = JSON.stringify(obj, null, 2);
       fs.writeFileSync(name, json);
