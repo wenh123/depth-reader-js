@@ -20,7 +20,7 @@
   if ('undefined' === typeof window) { // Node.js
     Image          = require('canvas').Image;
     Promise        = require('rsvp').Promise;
-    DepthReader    = require('../depth-reader.cov');
+    DepthReader    = require('../depth-reader');
     chaiAsPromised = require('chai-as-promised');
     chai           = require('chai');
   } else { // browser

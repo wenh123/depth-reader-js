@@ -9,7 +9,12 @@ module.exports = function(grunt) {
 
   var pkg        =  require('./package')
     , moduleName =  pkg.title || pkg.name
-    , nodeMajVer = +process.versions.node[0];
+    , nodeMajVer = +process.versions.node[0]
+    , doCoverage =  1 <= +nodeMajVer;
+
+  var fs   = require('fs')
+    , path = require('path')
+    , glob = require('glob');
 
   process.stderr.write = function() {};
 
@@ -49,11 +54,11 @@ module.exports = function(grunt) {
 
     clean: {
       src: {
-        files: ['*.min.js*']
+        src: ['*.min.js*']
       },
       test: {
-        files: [
-          '*.cov.js',
+        src: [
+          '**/*.cov.*',
           'coverage*'
         ]
       }
@@ -63,6 +68,7 @@ module.exports = function(grunt) {
     connect: {
       options: {
         hostname: '0.0.0.0',
+        baseUrl:  'http://localhost:<%= connect.options.port %>/',
         port:      9000,
         base: [
           '.',
@@ -76,12 +82,14 @@ module.exports = function(grunt) {
         }
       },
       test: {
+        pageUrl: '<%= connect.options.baseUrl %>test/test.html',
         options: {
           livereload: false,
-          open:      'http://localhost:<%= connect.options.port %>/test/test.html'
+          open:  '<%= connect.test.pageUrl %>'
         }
       },
       coverage:  {
+        pageUrl: '<%= connect.options.baseUrl %>test/test.cov.html',
         options: {
           livereload: false
         }
@@ -92,18 +100,20 @@ module.exports = function(grunt) {
     mochacli: {
       options: {
         ui:      'bdd',
-        files:  ['test/test.js'],
         timeout:  5000
       },
       test: {
         options: {
+          files:   ['test/test.js'],
           reporter: 'spec'
         }
       },
       coverage:  {
         options: {
-          reporter: nodeMajVer ? 'json-cov'       : 'spec',
-          save:     nodeMajVer ? 'coverage1.json' :  null
+          files:   [doCoverage ? 'test/test.cov.js'
+                               : 'test/test.js'],
+          reporter: doCoverage ? 'json-cov'       : 'spec',
+          save:     doCoverage ? 'coverage1.json' :  null
         }
       }
     },
@@ -112,7 +122,6 @@ module.exports = function(grunt) {
     /* jshint camelcase: false */
     mocha_phantomjs: {
       options:  {
-        urls:   ['http://localhost:<%= connect.options.port %>/test/test.html'],
         config: {
           ignoreResourceErrors: true
         },
@@ -123,30 +132,31 @@ module.exports = function(grunt) {
       },
       test: {
         options: {
+          urls:    ['<%= connect.test.pageUrl %>'],
           reporter: 'spec'
         }
       },
       coverage:  {
         options: {
-          silent:   nodeMajVer,
-          reporter: nodeMajVer ? 'json-cov'       : 'spec',
-          output:   nodeMajVer ? 'coverage2.json' :  null
+          urls:    [doCoverage ? '<%= connect.coverage.pageUrl %>'
+                               : '<%= connect.test.pageUrl %>'],
+          reporter: doCoverage ? 'json-cov'       : 'spec',
+          output:   doCoverage ? 'coverage2.json' :  null,
+          silent:   doCoverage
         }
       }
     },
 
     merge_jsoncov: {
-      options: {
-        src: [
-          'coverage1.json',
-          'coverage2.json'
-        ],
-        dest: {
-          json: 'coverage.json',
-          lcov: 'coverage.lcov'
-        },
-        delSrc: true
-      }
+      src: [
+        'coverage1.json',
+        'coverage2.json'
+      ],
+      dest: {
+        json: 'coverage.json',
+        lcov: 'coverage.lcov'
+      },
+      delSrc: true
     },
 
     coveralls: {
@@ -160,6 +170,13 @@ module.exports = function(grunt) {
         src:  'depth-reader.js',
         dest: 'depth-reader.cov.js'
       }
+    },
+
+    create_covs: {
+      src: [
+        'test/test.{js,html}'
+      ],
+      destSuffix: '.cov'
     },
 
     /**
@@ -203,14 +220,35 @@ module.exports = function(grunt) {
     }
   });
 
+  grunt.registerTask('create_covs', function() {
+    var sufx = grunt.config('create_covs.destSuffix')
+      , srcs = grunt.config('create_covs.src')
+      , jscv = grunt.config( 'jscoverage.src')
+      , from = '/' + path.basename(jscv.src, '.js')
+      , to   = '/' + path.basename(jscv.dest,'.js');
+
+    srcs.forEach(function(pat) {
+      glob.sync(pat).forEach(function(src) {
+        var ext  = path.extname(src)
+          , base = src.slice(0, -ext.length)
+          , dest = base + sufx + ext
+          , text = fs.readFileSync(src, 'utf8')
+                  .replace(from, to);
+        fs.writeFileSync(dest, text);
+      });
+    });
+  });
+
   grunt.registerTask('report_coverage', function() {
-    var rep1  = grunt.config(       'mochacli.coverage.options.reporter')
-      , rep2  = grunt.config('mocha_phantomjs.coverage.options.reporter')
+    var prop  = '.coverage.options.reporter'
+      , rpt1  =  grunt.config('mochacli'        + prop)
+      , rpt2  =  grunt.config('mocha_phantomjs' + prop)
       , regex = /cov/;
 
-    if (regex.test(rep1) &&
-        regex.test(rep2)) {
+    if (regex.test(rpt1) &&
+        regex.test(rpt2)) {
       grunt.task.run('merge_jsoncov');
+
       if (process.env.TRAVIS) {
         return grunt.task.run('coveralls');
       }
@@ -219,13 +257,11 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('merge_jsoncov', function() {
-    var conf = ['merge_jsoncov','options','src'];
+    var conf = ['merge_jsoncov', 'src'];
     grunt.config.requires(conf);
 
-    var fs    = require('fs')
-      , opts  = grunt.config(conf.slice(0,-1))
+    var opts  = grunt.config(conf.slice(0,-1))
       , names = opts.src
-      , name
       , objs  = names.map(function(file) {
           // can't just use require() because
           // PhantomJS dumps errors to stdout
@@ -244,7 +280,8 @@ module.exports = function(grunt) {
       , src  = srcs.shift()
       , nums = Object.keys(src)
       , sloc = 0
-      , hits = 0;
+      , hits = 0
+      , name;
 
     nums.forEach(function(n) {
       var line = src[n]
@@ -289,20 +326,17 @@ module.exports = function(grunt) {
     }
   });
 
-  grunt.registerTask('clean', function() {
-    var files = grunt.config('clean.files')
-      , glob  = require('glob')
-      , fs    = require('fs');
+  grunt.registerMultiTask('clean', function() {
+    var conf = [this.name, this.target, 'src']
+      , srcs = grunt.config(conf);
 
-    if (Array.isArray(files)) {
-      files.forEach(function(pat) {
-        glob.sync(pat).forEach(function(name) {
-          if (fs.existsSync(name)) {
-            fs.unlinkSync(name);
-          }
-        });
+    srcs.forEach(function(pat) {
+      glob.sync(pat).forEach(function(src) {
+        if (fs.existsSync(src)) {
+          fs.unlinkSync(src);
+        }
       });
-    }
+    });
   });
 
   grunt.registerTask('build', [
@@ -317,23 +351,29 @@ module.exports = function(grunt) {
 
   grunt.registerTask('test', [
     'clean:test',
+    'jshint:test',
     'connect:test',
-    'jscoverage',
     'mochacli:test',
     'mocha_phantomjs:test'
   ]);
 
-  grunt.registerTask('travis', [
+  grunt.registerTask('cover', [
     'clean:test',
-    'connect:coverage',
+    'jshint:test',
     'jscoverage',
+    'create_covs',
+    'connect:coverage',
     'mochacli:coverage',
     'mocha_phantomjs:coverage',
     'report_coverage'
   ]);
 
+  grunt.registerTask('travis', [
+    doCoverage ? 'cover' : 'test'
+  ]);
+
   grunt.registerTask('default', [
-    'jshint',
+    'build',
     'test'
   ]);
 };

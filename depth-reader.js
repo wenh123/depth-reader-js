@@ -423,7 +423,9 @@
 
   // convert sub-Uint8Array to string
   function baToStr(arr, pos, len) {
-    arr = arr.subarray(pos, pos + len);
+    var sub = arr.subarray || arr.slice;
+    arr = sub.call(arr, pos, pos + len);
+
     try {
       return String.fromCharCode.apply(null, arr);
     } catch (err) {
