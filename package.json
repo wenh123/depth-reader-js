@@ -8,18 +8,22 @@
     "depthmap",
     "RealSense"
   ],
-  "homepage": "https://github.com/IntelRealSense/depth-reader-js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/IntelRealSense/depth-reader-js.git"
+  },
   "bugs": {
     "url": "https://github.com/IntelRealSense/depth-reader-js/issues"
   },
-  "private": false,
-  "license": "MIT",
+  "homepage": "https://github.com/IntelRealSense/depth-reader-js",
   "author": {
     "name": "Erhhung Yuan",
     "email": "erhhung.yuan@intel.com"
   },
+  "license": "MIT",
+  "private": false,
   "engines": {
-    "node": ">=0.12"
+    "node": ">=0.10"
   },
   "main": "depth-reader.js",
   "dependencies": {
