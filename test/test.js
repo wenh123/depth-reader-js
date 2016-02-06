@@ -178,6 +178,7 @@
               return -1 !== [
                   '7LOe9bb3uf' // canvas
                 , '9m//9tuU8v' // Chrome
+                , 'Sft//ud/lv' // Safari
                 , 'XhkZsS8nT2' // PhantomJS
                 ].indexOf(value);
             });
@@ -191,6 +192,7 @@
               return -1 !== [
                   'AAAAAAAAAA' // canvas/PhantomJS
                 , 'IECAAAECQQ' // Chrome
+                , 'YMCAAQMGDB' // Safari
                 ].indexOf(value);
             });
             pngData = data;
