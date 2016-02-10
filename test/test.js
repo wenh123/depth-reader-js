@@ -723,9 +723,10 @@
         reject(new Error('cannot load image'));
       };
 
-      if ('undefined' === typeof window ||
-          !(src instanceof Uint8Array)) {
-        img.src  = src;
+      if ('string' === typeof src) { // URL or data URI
+        img.src = src;
+      } else if ('undefined' === typeof window) { // Node.js
+        img.src = new Buffer(src);
       } else {
         // PhantomJS requires Blob polyfill
         var blob = new Blob([src]);
