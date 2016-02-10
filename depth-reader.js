@@ -111,6 +111,8 @@
         bytes[1] !== 0xd8) { // JPEG start-of-image
       throw new Error('file is not a JPEG image');
     }
+    this.fileData = bytes;
+
     var xmpXapXml = ''
       , xmpExtXml = ''
       , payload
@@ -489,8 +491,7 @@
         xhr.onload = function() {
           if (2 === (this.status / 100 | 0)) {
             try {  // parsing is synchronous
-              self.fileData = this.response;
-              self.parseFile.call(self, self.fileData);
+              self.parseFile.call(self, this.response);
               resolve(self);
             }
             catch (err) {

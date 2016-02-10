@@ -37,19 +37,10 @@ reader.debug = true; // save xmpXapXml/xmpExtXml
 
 (function() {
   if (args.url) {
-    // .loadFile() assigns .fileData
     return reader.loadFile(args.url);
   }
   return loadFile(args.file)
-    .then(function(buf) {
-      /*
-       * assigning to .fileData is NOT required
-       * (done here just to write out container
-       * image later)
-       */
-      reader.fileData = buf;
-      reader.parseFile(buf);
-    });
+     .then(reader.parseFile.bind(reader));
 })()
   .then(function() {
     if (reader.xmpXapXml) {
