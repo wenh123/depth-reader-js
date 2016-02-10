@@ -123,17 +123,19 @@ folder built for Node.js v5.0.
 
     function loadImage(src) {
         return new Promise(function(resolve, reject) {
-            try {
-                var img = new Image();
-                img.onload = function() {
-                    resolve(img);
-                };
-                img.onerror = function() {
-                    reject(new Error('cannot load image'));
-                };
-                img.src = src;
-            } catch (err) {
-                reject(err);
+            var img = new Image();
+
+            img.onload  = function() { resolve(img); };
+            img.onerror = function() {
+                reject(new Error('cannot load image'));
+            };
+
+            if ('undefined' === typeof window ||
+                !(src instanceof Uint8Array)) {
+                img.src  = src;
+            } else {
+                var blob = new Blob([src]);
+                img.src  = URL.createObjectURL(blob);
             }
         });
     }
@@ -181,7 +183,7 @@ Class **DepthReader** *(constructor takes no arguments)*
   - **focalPointY** *float*
   - **focalDistance** *float*
   - **blurAtInfinity** *float*
-- **fileData** *ArrayBuffer*/*Buffer* - container JPEG file loaded by loadFile()
+- **fileData** *Uint8Array* - container JPEG file
 - **image** *object* - reference image
   - **mime** *string* - generally image/jpeg
   - **data** *string* - data URI

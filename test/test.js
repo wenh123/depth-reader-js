@@ -114,6 +114,14 @@
         reader.perspective.principalPointY.should.equal(0.512869);
       });
 
+      it('should have container image at 2880x2067', function() {
+        return loadImage(reader.fileData)
+          .then(function(img) {
+            img.width.should.equal(2880);
+            img.height.should.equal(2067);
+          });
+      });
+
       it('should have set image.mime to "image/jpeg"', function() {
         reader.image.mime.should.equal('image/jpeg');
       });
@@ -520,6 +528,14 @@
         reader.isXDM.should.be.false;
       });
 
+      it('should have container image at 576x1024', function() {
+        return loadImage(reader.fileData)
+          .then(function(img) {
+            img.width.should.equal(576);
+            img.height.should.equal(1024);
+          });
+      });
+
       it('should have set image.mime to "image/jpeg"', function() {
         reader.image.mime.should.equal('image/jpeg');
       });
@@ -706,7 +722,15 @@
       img.onerror = function() {
         reject(new Error('cannot load image'));
       };
-      img.src = src;
+
+      if ('undefined' === typeof window ||
+          !(src instanceof Uint8Array)) {
+        img.src  = src;
+      } else {
+        // PhantomJS requires Blob polyfill
+        var blob = new Blob([src]);
+        img.src  = URL.createObjectURL(blob);
+      }
     });
   }
 
