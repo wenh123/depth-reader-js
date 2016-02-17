@@ -185,7 +185,7 @@ Class **DepthReader** *(constructor takes no arguments)*
   - **focalPointY** *float*
   - **focalDistance** *float*
   - **blurAtInfinity** *float*
-- **fileData** *Uint8Array* - container JPEG file
+- **fileData** *Uint8Array|Buffer* - container JPEG file
 - **image** *object* - reference image
   - **mime** *string* - generally image/jpeg
   - **data** *string* - data URI

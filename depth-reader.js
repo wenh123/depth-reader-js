@@ -105,37 +105,42 @@
    * @param {ArrayBuffer|Buffer} buffer - JPEG image
    */
   DepthReader.prototype.parseFile = function(buffer) {
-    var bytes = buffer instanceof Uint8Array ?
-                buffer : new Uint8Array(buffer);
-    if (bytes[0] !== 0xff ||
-        bytes[1] !== 0xd8) { // JPEG start-of-image
+    if ('undefined' === typeof window) { // Node.js
+      if (!(buffer instanceof Buffer) &&
+          !(buffer instanceof Uint8Array)) {
+        buffer = new Buffer(buffer);
+      }
+    } else if (!(buffer instanceof Uint8Array)) {
+      buffer = new Uint8Array(buffer);
+    }
+    var buf = this.fileData = buffer;
+    if (buf[0] !== 0xff ||
+        buf[1] !== 0xd8) { // JPEG start-of-image
       throw new Error('file is not a JPEG image');
     }
-    this.fileData = bytes;
-
     var xmpXapXml = ''
       , xmpExtXml = ''
       , payload
       , header
       , i = 0;
 
-    while (-1 < (i = findMarker(bytes, i))) {
+    while (-1 < (i = findMarker(buf, i))) {
       i += 2; // skip marker to segment start
 
-      if ((header = getHeader(bytes, i))) {
+      if ((header = getHeader(buf, i))) {
         // payload start = segment start + header length
         //               + sizeof word + null-terminator
         // if extension: + 32-byte HasExtendedXMP UUID
         //               +  8-byte "I don't know/care"
         var isXap = xmpXapNS === header
           , extra = header.length + (isXap ? 3 : 43)
-          , size  = (bytes[i  ] << 8)
-                  +  bytes[i+1]
+          , size  = (buf[i  ] << 8)
+                  +  buf[i+1]
                       - extra
           , start = i + extra;
         i = start + size;
 
-        payload = baToStr(bytes, start, size);
+        payload = baToStr(buf, start, size);
         if (isXap) {
           xmpXapXml += payload;
         } else {
