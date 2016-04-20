@@ -62,90 +62,96 @@ folder built for Node.js v5.0.
 
 *Browser:*
 
-    <script src="/bower_components/rsvp/rsvp.js"></script>
-    <script src="/bower_components/depth-reader/depth-reader.js"></script>
+```html
+<script src="/bower_components/rsvp/rsvp.js"></script>
+<script src="/bower_components/depth-reader/depth-reader.js"></script>
+```
 
 *Node.js:*
 
-    var DepthReader = require('depth-reader'),
-        Image       = require('canvas').Image;
+```js
+var DepthReader = require('depth-reader'),
+    Image       = require('canvas').Image;
+```
 
 *Example:*
 
-    var fileURL = 'http://localhost/images/depth.jpg',
-        reader  = new DepthReader();
+```js
+var fileURL = 'http://localhost/images/depth.jpg',
+    reader  = new DepthReader();
 
-    reader.loadFile(fileURL)
-        .then(function(reader) {
-            return loadImage(reader.fileData);
-        })
-        .then(function(img) {
-            // container image may contain user-applied effects
-            showDimensions(img, 'Container');
+reader.loadFile(fileURL)
+    .then(function(reader) {
+        return loadImage(reader.fileData);
+    })
+    .then(function(img) {
+        // container image may contain user-applied effects
+        showDimensions(img, 'Container');
 
-            return loadImage(reader.image.data);
-        })
-        .then(function(img) {
-            // reference image is the pre-edited camera image,
-            // but may be cropped to rid objectionable content
-            showDimensions(img, 'Reference');
+        return loadImage(reader.image.data);
+    })
+    .then(function(img) {
+        // reference image is the pre-edited camera image,
+        // but may be cropped to rid objectionable content
+        showDimensions(img, 'Reference');
 
-            // normalize depth values between 0-255
-            // and shift them by 64 to boost effect
-            return reader.normalizeDepthMap({bias: 64});
-        })
-        .then(function(data) { // depth.data
-            return loadImage(data);
-        })
-        .then(function(img) {
-            showDimensions(img, 'Depth Map');
+        // normalize depth values between 0-255
+        // and shift them by 64 to boost effect
+        return reader.normalizeDepthMap({bias: 64});
+    })
+    .then(function(data) { // depth.data
+        return loadImage(data);
+    })
+    .then(function(img) {
+        showDimensions(img, 'Depth Map');
 
-            // confidence map may be missing
-            var data = reader.confidence.data;
-            return data && loadImage(data);
-        })
-        .then(function(img) {
-            if (img) {
-                // confidence map must be the
-                // same size as the depth map
-                showDimensions(img, 'Confidence');
-            }
-        })
-        .then(function() {
-            // dump serialized metadata
-            // without data from images
-            console.log('image metadata:');
-            console.log(JSON.stringify(reader, null, 2));
-        })
-        .catch(function(err) {
-            console.error('loading failed:', err);
-        });
+        // confidence map may be missing
+        var data = reader.confidence.data;
+        return data && loadImage(data);
+    })
+    .then(function(img) {
+        if (img) {
+            // confidence map must be the
+            // same size as the depth map
+            showDimensions(img, 'Confidence');
+        }
+    })
+    .then(function() {
+        // dump serialized metadata
+        // without data from images
+        console.log('image metadata:');
+        console.log(JSON.stringify(reader, null, 2));
+    })
+    .catch(function(err) {
+        console.error('loading failed:', err);
+    });
 
-    function loadImage(src) {
-        return new Promise(function(resolve, reject) {
-            var img = new Image();
+function loadImage(src) {
+    return new Promise(function(resolve, reject) {
+        var img = new Image();
 
-            img.onload  = function() { resolve(img); };
-            img.onerror = function() {
-                reject(new Error('cannot load image'));
-            };
+        img.onload  = function() { resolve(img); };
+        img.onerror = function() {
+            reject(new Error('cannot load image'));
+        };
 
-            if ('string' === typeof src) { // URL or data URI
-                img.src = src;
-            } else if ('undefined' === typeof window) { // Node.js
-                img.src = new Buffer(src);
-            } else {
-                // PhantomJS requires Blob polyfill
-                var blob = new Blob([src]);
-                img.src  = URL.createObjectURL(blob);
-            }
-        });
-    }
+        if ('string' === typeof src) { // URL or data URI
+            img.src = src;
+        } else if ('undefined' === typeof window) { // Node.js
+            img.src = new Buffer(src);
+        } else {
+            // PhantomJS requires Blob polyfill
+            var blob = new Blob([src]);
+            img.src  = URL.createObjectURL(blob);
+        }
+    });
+}
 
-    function showDimensions(img, type) {
-        console.log(type, 'image dimensions:',
-            img.width + 'x' + img.height);
-    }
+function showDimensions(img, type) {
+    console.log(type, 'image dimensions:',
+        img.width + 'x' + img.height);
+}
+```
 
 ## API Reference
 
